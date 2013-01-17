@@ -5,29 +5,42 @@ using System.Collections.Generic;
 using System.IO.IsolatedStorage;
 using System.Diagnostics;
 
+/**
+ * A doodle, merely a work in progess. There's close to not a single best practice being followed here.
+ */
 namespace ImgDiff
 {
 	public partial class imgdiff : Window
 	{
 		FileSystemWatcher watcher_;
-		Dictionary<string,Widget> images_;
+		Dictionary<string,Image> images_;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
 		{
 			// Clear isolated storage
-			foreach(string file in isoStore().GetFileNames())
-				isoStore().DeleteFile(file);
+			//
+			// using (IsolatedStorageFile isoStore = this.isoStore()) {
+			//   foreach(string file in isoStore.GetFileNames())
+			//	   isoStore.DeleteFile(file);
+			// }
 
 			this.Build ();
 
-			this.images_ = new Dictionary<string,Widget>();
+			this.images_ = new Dictionary<string,Image>();
+			this.watcher_ = new FileSystemWatcher ();
 
 			this.entryWatchedFolder.TextInserted += HandleTextInserted;
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
 			//this.filechooserbutton2.SetCurrentFolder(this.filechooserbutton2.CurrentFolder); // Call event handler
 
 			this.entryWatchedFolder.Text = "/Users/johan/Desktop/tmp";
+		}
+
+		protected void OnDeleteEvent (object sender, DeleteEventArgs a)
+		{
+			Application.Quit ();
+			a.RetVal = true;
 		}
 
 		void HandleTextInserted (object o, TextInsertedArgs args)
@@ -41,44 +54,51 @@ namespace ImgDiff
 				return;
 
 			this.filechooserbutton2.SetCurrentFolder( folder );
-		    watcher_ = new FileSystemWatcher (folder);
+			watcher_.Path = folder;
 			watcher_.EnableRaisingEvents = true;
-			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => Update ();
-			watcher_.Created += (object sender, System.IO.FileSystemEventArgs e) => Update ();
-			watcher_.Deleted += (object sender, System.IO.FileSystemEventArgs e) => Update ();
-			watcher_.Renamed += (object sender, RenamedEventArgs e) => Update ();
-			watcher_.Error += (object sender, ErrorEventArgs e) => Update ();
+			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
+			watcher_.Created += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
+			watcher_.Deleted += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
+			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate ();
+			watcher_.Error += (object sender, ErrorEventArgs e) => WatcherUpdate ();
 
 			Update();
 		}
 
+		void WatcherUpdate ()
+		{
+			Gtk.Application.Invoke( delegate {
+				Update();
+			});
+		}
+
 		void Update ()
 		{
-			Stopwatch watch = new Stopwatch();
-			watch.Start();
+			Stopwatch watch = new Stopwatch ();
+			watch.Start ();
 
 			string[] files = Directory.GetFiles (this.entryWatchedFolder.Text);
 			uint j = 0;
 
-			Dictionary<string,Widget> newimages = new Dictionary<string,Widget> ();
-			Gtk.Table table = new Table(this.table1.NRows, 3, false);
+			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
+
+			Table table = new Table (Math.Max (1, (uint)files.Length), 3u, false);
+
 			for (int i=0; i<files.Length; ++i) {
 				try {
-					Widget af = getImage (files [i]);
-					newimages [files [i]] = af;
+					AspectFrame af = getImage (files [i]);
+					AspectFrame af2 = getReferenceImage (files [i]);
 
-					Widget af2 = getReferenceImage (files [i]);
-					newimages [files [i]] = af2;
+					updateCache (newimages, af);
+					updateCache (newimages, af2);
 
 					Image arrow = new Image ();
 					arrow.Pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-go-forward", IconSize.LargeToolbar);
-					Button button = new Button();
+					Button button = new Button ();
 					button.Add (arrow);
 					button.Clicked += (object sender, EventArgs e) => validateImage (af, af2);
 
 					j++;
-					if (null != Array.Find( table1.Children, c ) )
-						table1.Remove (c);
 
 					table.Attach (af, 0u, 1u, j - 1, j);
 					table.Attach (button, 1u, 2u, j - 1, j);
@@ -88,41 +108,46 @@ namespace ImgDiff
 				}
 			}
 
-			if (j < this.table1.NRows) {
+			if (j < table.NRows) {
 				//this.table1.Attach (null, 0u, 3u, j, this.table1.NRows);
-				this.table1.Resize( j, this.table1.NColumns );
+				table.Resize (Math.Max (1, j), table.NColumns);
 			}
 
-			foreach (Widget c in scrolledwindow1.Children) scrolledwindow1.Remove(c);
-			scrolledwindow1.Child = table;
-			this.images_ = newimages;
-			scrolledwindow1.ShowAll();
+			if (scrolledwindow1.Child != null) {
+				Bin c = (scrolledwindow1.Child as Bin);
+				if (null != c.Child)
+					c.Remove (c.Child);
+			}
 
-			watch.Stop();
-			System.Console.WriteLine(string.Format("Updated {1} files in {0} s", watch.ElapsedMilliseconds*1e-3, j));
+			VBox vbox = new VBox ();
+			scrolledwindow1.AddWithViewport (vbox);
+
+			this.images_ = newimages;
+
+			watch.Stop ();
+			System.Console.WriteLine (string.Format ("Updated {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, j));
+
+			vbox.Add (table);
+			vbox.ShowAll();
 		}
 
-		Widget getImage (string path)
+		AspectFrame getImage (string path)
 		{
-			if (images_.ContainsKey (path)) {
-				Widget image = images_ [path];
-				(image.Parent as Container).Remove(image);
+			AspectFrame image = fromCache(path);
+			if (image != null)
 				return image;
-			}
 
 			return createWidget( new Gdk.Pixbuf (path), path );
 		}
 
 
-		Widget getReferenceImage (string path)
+		AspectFrame getReferenceImage (string path)
 		{
 			string isopath = this.isopath (path);
 
-			if (images_.ContainsKey (isopath)) {
-				Widget image = images_ [path];
-				(image.Parent as Container).Remove(image);
+			AspectFrame image = fromCache(isopath);
+			if (image != null)
 				return image;
-			}
 
 			Gdk.Pixbuf pixbuf = null;
 
@@ -140,11 +165,11 @@ namespace ImgDiff
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
 			}
 
-			return createWidget( pixbuf, path );
+			return createWidget( pixbuf, isopath );
 		}
 
 
-		Widget createWidget(Gdk.Pixbuf pixbuf, string path)
+		AspectFrame createWidget(Gdk.Pixbuf pixbuf, string path)
 		{
 			AspectFrame af = new AspectFrame(null, 0.5f, 0.5f, 1, false);
 			createImage(af, pixbuf, path);
@@ -154,7 +179,8 @@ namespace ImgDiff
 
 		void createImage (AspectFrame af, Gdk.Pixbuf pixbuf, string path)
 		{
-			System.Console.WriteLine (string.Format("Creating {0}image of {1}",
+			if (pixbuf!=null)
+				System.Console.WriteLine (string.Format("Creating {0}image of {1}",
 			                                        pixbuf==null?"empty ":"", 
 			                                        System.IO.Path.GetFileName(path)));
 
@@ -179,11 +205,11 @@ namespace ImgDiff
 
 					if (im.Pixbuf.Width != args.Allocation.Width || im.Pixbuf.Height != args.Allocation.Height)
 					{
-						string p = im.Data["path"] as string;
-						System.Console.WriteLine (string.Format("Resizing {0} to {1}x{2} from origin {3}x{4}",
-						                                        System.IO.Path.GetFileName(p),
-						                                        args.Allocation.Width, args.Allocation.Height,
-						                                        pb.Width, pb.Height));
+//						string p = im.Data["path"] as string;
+//						System.Console.WriteLine (string.Format("Resizing {0} to {1}x{2} from origin {3}x{4}",
+//						                                        System.IO.Path.GetFileName(p),
+//						                                        args.Allocation.Width, args.Allocation.Height,
+//						                                        pb.Width, pb.Height));
 						im.Pixbuf = pb.ScaleSimple(args.Allocation.Width, args.Allocation.Height, Gdk.InterpType.Nearest);
 					}
 				};
@@ -191,35 +217,39 @@ namespace ImgDiff
 		}
 
 
-		void validateImage (Widget testWidget, Widget reference)
+		void validateImage (AspectFrame testWidget, AspectFrame reference)
 		{
 			Gdk.Pixbuf pixbuf = null;
 
-			Widget w = (testWidget as AspectFrame).Child;
+			Widget w = testWidget.Child;
 			string path = w.Data ["path"] as string;
+			string isopath = this.isopath (path);
 
 			try {
-
-				string isopath = this.isopath (path);
 
 				using (IsolatedStorageFile isoStore = this.isoStore()) {
 					// copy file int o isolated storage
 					using (IsolatedStorageFileStream output = isoStore.OpenFile(isopath, FileMode.Create)) {
 						using (FileStream input = new FileStream(path, FileMode.Open)) {
-							CopyStream(input, output);
+							CopyStream (input, output);
 						}
 					}
 
-					pixbuf = new Gdk.Pixbuf (isoStore.OpenFile (isopath, FileMode.Open));
+					using (IsolatedStorageFileStream input = isoStore.OpenFile (isopath, FileMode.Open)) {
+						pixbuf = new Gdk.Pixbuf (input);
+					}
 				}
 			} catch (Exception x) {
-					System.Console.WriteLine(x.Message);
-					pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
+				System.Console.WriteLine (x.Message);
+				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
 			}
+
+
 			createImage (
-					(reference as AspectFrame),
-					pixbuf,
-					path);
+				reference,
+				pixbuf,
+			    isopath);
+
 
 			reference.ShowAll ();
 		}
@@ -253,5 +283,28 @@ namespace ImgDiff
 				output.Write (buffer, 0, read);
 			}
 		}
+
+		void updateCache( Dictionary<string,Image> newimages, AspectFrame af )
+		{
+			Image im = af.Child as Image;
+			newimages [im.Data["path"] as string] = im;
+		}
+
+		AspectFrame fromCache(string path)
+		{
+			if (images_.ContainsKey (path)) {
+				AspectFrame af = new AspectFrame(null, 0.5f, 0.5f, 1, false);
+				Image image = images_ [path];
+				Gdk.Pixbuf pixbuf = image.Data["pixbuf"] as Gdk.Pixbuf;
+				if (pixbuf != null)
+					af.Set( 0.5f, 0.5f, pixbuf.Width/(float)pixbuf.Height, false );
+
+				image.Reparent(af);
+
+				return af;
+			}
+			return null;
+		}
+
 	}
 }

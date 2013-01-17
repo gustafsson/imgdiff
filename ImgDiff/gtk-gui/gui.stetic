@@ -14,6 +14,7 @@
     <property name="WindowPosition">CenterOnParent</property>
     <property name="BorderWidth">6</property>
     <property name="AllowShrink">True</property>
+    <signal name="DeleteEvent" handler="OnDeleteEvent" />
     <child>
       <widget class="Gtk.VBox" id="vbox1">
         <property name="MemberName" />
@@ -86,6 +87,20 @@
           </packing>
         </child>
         <child>
+          <widget class="Gtk.Image" id="image3">
+            <property name="MemberName" />
+            <property name="Visible">False</property>
+            <property name="Pixbuf">stock:gtk-apply Menu</property>
+          </widget>
+          <packing>
+            <property name="PackType">End</property>
+            <property name="Position">2</property>
+            <property name="AutoSize">True</property>
+            <property name="Expand">False</property>
+            <property name="Fill">False</property>
+          </packing>
+        </child>
+        <child>
           <widget class="Gtk.Entry" id="entry3">
             <property name="MemberName" />
             <property name="CanFocus">True</property>
@@ -94,7 +109,7 @@
           </widget>
           <packing>
             <property name="PackType">End</property>
-            <property name="Position">2</property>
+            <property name="Position">3</property>
             <property name="AutoSize">True</property>
             <property name="Expand">False</property>
             <property name="Fill">False</property>

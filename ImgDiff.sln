@@ -3,16 +3,33 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImgDiff", "ImgDiff\ImgDiff.csproj", "{0EF4EF97-84BC-4A91-97B6-1CD158984E13}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tst", "tst\tst.csproj", "{04918888-B6F8-4B52-9EDA-3B8A692C1060}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tst2", "tst2\tst2.csproj", "{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
 		Release|x86 = Release|x86
+		AppStore|x86 = AppStore|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.AppStore|x86.ActiveCfg = AppStore|x86
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.AppStore|x86.Build.0 = AppStore|x86
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.Debug|x86.ActiveCfg = Debug|x86
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.Debug|x86.Build.0 = Debug|x86
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.Release|x86.ActiveCfg = Release|x86
+		{04918888-B6F8-4B52-9EDA-3B8A692C1060}.Release|x86.Build.0 = Release|x86
 		{0EF4EF97-84BC-4A91-97B6-1CD158984E13}.Debug|x86.ActiveCfg = Debug|x86
 		{0EF4EF97-84BC-4A91-97B6-1CD158984E13}.Debug|x86.Build.0 = Debug|x86
 		{0EF4EF97-84BC-4A91-97B6-1CD158984E13}.Release|x86.ActiveCfg = Release|x86
 		{0EF4EF97-84BC-4A91-97B6-1CD158984E13}.Release|x86.Build.0 = Release|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.AppStore|x86.ActiveCfg = Debug|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.AppStore|x86.Build.0 = Debug|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.Debug|x86.ActiveCfg = Debug|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.Debug|x86.Build.0 = Debug|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.Release|x86.ActiveCfg = Release|x86
+		{24A315F3-A0AB-4810-8510-B2E6DF64AEFD}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = ImgDiff\ImgDiff.csproj

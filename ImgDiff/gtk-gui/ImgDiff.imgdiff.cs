@@ -10,9 +10,7 @@ namespace ImgDiff
 		private global::Gtk.Entry entryWatchedFolder;
 		private global::Gtk.FileChooserButton filechooserbutton2;
 		private global::Gtk.ScrolledWindow scrolledwindow1;
-		private global::Gtk.Table table1;
-		private global::Gtk.Image image2;
-		private global::Gtk.Button button1;
+		private global::Gtk.Image image3;
 		private global::Gtk.Entry entry3;
 		
 		protected virtual void Build ()
@@ -66,39 +64,19 @@ namespace ImgDiff
 			this.scrolledwindow1.CanFocus = true;
 			this.scrolledwindow1.Name = "scrolledwindow1";
 			this.scrolledwindow1.ShadowType = ((global::Gtk.ShadowType)(1));
-			// Container child scrolledwindow1.Gtk.Container+ContainerChild
-			global::Gtk.Viewport w5 = new global::Gtk.Viewport ();
-			w5.ShadowType = ((global::Gtk.ShadowType)(0));
-			// Container child GtkViewport1.Gtk.Container+ContainerChild
-			this.table1 = new global::Gtk.Table (((uint)(3)), ((uint)(3)), false);
-			this.table1.Name = "table1";
-			this.table1.RowSpacing = ((uint)(6));
-			this.table1.ColumnSpacing = ((uint)(6));
-			w5.Add (this.table1);
-			this.scrolledwindow1.Add (w5);
 			this.vbox1.Add (this.scrolledwindow1);
-			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
-			w8.Position = 1;
+			global::Gtk.Box.BoxChild w5 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
+			w5.Position = 1;
 			// Container child vbox1.Gtk.Box+BoxChild
-			this.image2 = new global::Gtk.Image ();
-			this.image2.Name = "image2";
-			this.image2.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-go-forward", global::Gtk.IconSize.Menu);
-			this.vbox1.Add (this.image2);
-			global::Gtk.Box.BoxChild w9 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image2]));
-			w9.Position = 2;
-			w9.Expand = false;
-			w9.Fill = false;
-			// Container child vbox1.Gtk.Box+BoxChild
-			this.button1 = new global::Gtk.Button ();
-			this.button1.CanFocus = true;
-			this.button1.Name = "button1";
-			this.button1.Relief = ((global::Gtk.ReliefStyle)(2));
-			this.button1.Label = global::Mono.Unix.Catalog.GetString ("GtkButton");
-			this.vbox1.Add (this.button1);
-			global::Gtk.Box.BoxChild w10 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.button1]));
-			w10.Position = 3;
-			w10.Expand = false;
-			w10.Fill = false;
+			this.image3 = new global::Gtk.Image ();
+			this.image3.Name = "image3";
+			this.image3.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-apply", global::Gtk.IconSize.Menu);
+			this.vbox1.Add (this.image3);
+			global::Gtk.Box.BoxChild w6 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
+			w6.PackType = ((global::Gtk.PackType)(1));
+			w6.Position = 2;
+			w6.Expand = false;
+			w6.Fill = false;
 			// Container child vbox1.Gtk.Box+BoxChild
 			this.entry3 = new global::Gtk.Entry ();
 			this.entry3.CanFocus = true;
@@ -106,18 +84,20 @@ namespace ImgDiff
 			this.entry3.IsEditable = true;
 			this.entry3.InvisibleChar = '●';
 			this.vbox1.Add (this.entry3);
-			global::Gtk.Box.BoxChild w11 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.entry3]));
-			w11.PackType = ((global::Gtk.PackType)(1));
-			w11.Position = 4;
-			w11.Expand = false;
-			w11.Fill = false;
+			global::Gtk.Box.BoxChild w7 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.entry3]));
+			w7.PackType = ((global::Gtk.PackType)(1));
+			w7.Position = 3;
+			w7.Expand = false;
+			w7.Fill = false;
 			this.Add (this.vbox1);
 			if ((this.Child != null)) {
 				this.Child.ShowAll ();
 			}
 			this.DefaultWidth = 596;
 			this.DefaultHeight = 363;
+			this.image3.Hide ();
 			this.Show ();
+			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.OnDeleteEvent);
 		}
 	}
 }
