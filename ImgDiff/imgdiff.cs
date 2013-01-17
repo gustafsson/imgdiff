@@ -141,7 +141,7 @@ namespace ImgDiff
 					string diffstring;
 					double R2 = 0;
 					AspectFrame af3 = getDiff (af, af2, out diffstring, out R2);
-					if (R2 > R2_threshold) {
+					if (R2 >= R2_threshold) {
 						imagefiles.Add (files [i]);
 						R2_Values.Add (R2);
 						continue;
