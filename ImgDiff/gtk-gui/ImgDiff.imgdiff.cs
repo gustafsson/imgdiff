@@ -16,6 +16,8 @@ namespace ImgDiff
 		private global::Gtk.FileChooserButton filechooserbutton2;
 		private global::Gtk.ScrolledWindow scrolledwindow1;
 		private global::Gtk.Statusbar statusbar;
+		private global::Gtk.Label label5;
+		private global::Gtk.Entry entryR2;
 		private global::Gtk.Image image3;
 		
 		protected virtual void Build ()
@@ -97,22 +99,43 @@ namespace ImgDiff
 			this.statusbar = new global::Gtk.Statusbar ();
 			this.statusbar.Name = "statusbar";
 			this.statusbar.Spacing = 6;
-			this.vbox1.Add (this.statusbar);
-			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.statusbar]));
-			w8.PackType = ((global::Gtk.PackType)(1));
-			w8.Position = 3;
+			// Container child statusbar.Gtk.Box+BoxChild
+			this.label5 = new global::Gtk.Label ();
+			this.label5.Name = "label5";
+			this.label5.LabelProp = global::Mono.Unix.Catalog.GetString ("R2");
+			this.statusbar.Add (this.label5);
+			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.statusbar [this.label5]));
+			w8.Position = 2;
 			w8.Expand = false;
 			w8.Fill = false;
+			// Container child statusbar.Gtk.Box+BoxChild
+			this.entryR2 = new global::Gtk.Entry ();
+			this.entryR2.CanFocus = true;
+			this.entryR2.Name = "entryR2";
+			this.entryR2.IsEditable = true;
+			this.entryR2.MaxLength = 8;
+			this.entryR2.InvisibleChar = '●';
+			this.statusbar.Add (this.entryR2);
+			global::Gtk.Box.BoxChild w9 = ((global::Gtk.Box.BoxChild)(this.statusbar [this.entryR2]));
+			w9.Position = 3;
+			w9.Expand = false;
+			w9.Fill = false;
+			this.vbox1.Add (this.statusbar);
+			global::Gtk.Box.BoxChild w10 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.statusbar]));
+			w10.PackType = ((global::Gtk.PackType)(1));
+			w10.Position = 3;
+			w10.Expand = false;
+			w10.Fill = false;
 			// Container child vbox1.Gtk.Box+BoxChild
 			this.image3 = new global::Gtk.Image ();
 			this.image3.Name = "image3";
 			this.image3.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-apply", global::Gtk.IconSize.Menu);
 			this.vbox1.Add (this.image3);
-			global::Gtk.Box.BoxChild w9 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
-			w9.PackType = ((global::Gtk.PackType)(1));
-			w9.Position = 4;
-			w9.Expand = false;
-			w9.Fill = false;
+			global::Gtk.Box.BoxChild w11 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
+			w11.PackType = ((global::Gtk.PackType)(1));
+			w11.Position = 4;
+			w11.Expand = false;
+			w11.Fill = false;
 			this.Add (this.vbox1);
 			if ((this.Child != null)) {
 				this.Child.ShowAll ();
@@ -124,6 +147,7 @@ namespace ImgDiff
 			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.OnDeleteEvent);
 			this.AboutAction.Activated += new global::System.EventHandler (this.OnAboutActionActivated);
 			this.QuitAction.Activated += new global::System.EventHandler (this.OnQuitActionActivated);
+			this.entryR2.Changed += new global::System.EventHandler (this.OnEntryR2Changed);
 		}
 	}
 }

@@ -17,6 +17,7 @@ namespace ImgDiff
 		Dictionary<string,Image> images_;
 		Timer checkmodification_;
 		Dictionary<string,DateTime> lastwrites_;
+		double R2_threshold;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
@@ -24,6 +25,9 @@ namespace ImgDiff
 			this.Build ();
 
 			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
+
+			R2_threshold = 0.9999;
+			this.entryR2.Text = R2_threshold.ToString("G");
 
 			this.images_ = new Dictionary<string,Image>();
 			this.watcher_ = new FileSystemWatcher ();
@@ -40,7 +44,7 @@ namespace ImgDiff
 
 			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
-				if (new DirectoryInfo(this.entryWatchedFolder.Text).FullName == this.filechooserbutton2.CurrentFolder)
+				if (new DirectoryInfo(this.entryWatchedFolder.Text).FullName != this.filechooserbutton2.CurrentFolder)
 					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
 			};
 			//this.filechooserbutton2.SetCurrentFolder(this.filechooserbutton2.CurrentFolder); // Call event handler
@@ -135,19 +139,18 @@ namespace ImgDiff
 
 			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
 
-			Table table = new Table (Math.Max (1, 2*(uint)files.Length), 7u, false);
+			Table table = new Table (Math.Max (1, 2 * (uint)files.Length), 7u, false);
 			Gdk.Color col = new Gdk.Color ();
 			Gdk.Color.Parse ("red", ref col);
-			List<string> imagefiles = new List<string>();
+			List<string> imagefiles = new List<string> ();
+			List<double> R2_Values = new List<double> ();
 			for (int i=0; i<files.Length; ++i) {
 				try {
-					if (equalfiles(files [i]))
+					if (equalfiles (files [i]))
 						continue;
 
 					AspectFrame af = getImage (files [i]);
 					AspectFrame af2 = getReferenceImage (files [i]);
-
-					imagefiles.Add(files[i]);
 
 					updateCache (newimages, af);
 					updateCache (newimages, af2);
@@ -155,24 +158,24 @@ namespace ImgDiff
 					VBox sumbox = new VBox ();
 
 					string diffstring;
-					bool equal = false;
-					AspectFrame af3 = getDiff (af, af2, out diffstring, out equal);
-					if (equal)
+					double R2 = 0;
+					AspectFrame af3 = getDiff (af, af2, out diffstring, out R2);
+					if (R2 > R2_threshold) {
+						imagefiles.Add (files [i]);
+						R2_Values.Add (R2);
 						continue;
+					}
 
 					if (af3 != null)
 						sumbox.Add (af3);
 
-					Label infotext = new Label ();
-					infotext.Text = diffstring;
-//					sumbox.Add (null);
-//					table.ModifyBg(StateType.Normal, col);
-
+					Label infotext = new Label (diffstring);
 					sumbox.Add (infotext);
+					Box.BoxChild infotextbc = ((Box.BoxChild)(sumbox [infotext]));
+					infotextbc.Expand = false;
 					sumbox.Add (new VBox ());
 
-//					sumbox.Add (null);
-					int mywidth = 20;
+					int mywidth = 24;
 
 					Image arrow = new Image ();
 					arrow.Pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-go-forward", IconSize.LargeToolbar);
@@ -194,15 +197,15 @@ namespace ImgDiff
 						sumbox.SetSizeRequest (mywidth, (this.Allocation.Width - mywidth - scrollbarwidth) / 2 * height / width);
 					};
 
-					j+=2;
+					j += 2;
 
-					Label nametext = new Label(System.IO.Path.GetFileName(files[i]));
-					Label nametext2 = new Label(System.IO.Path.GetFileName(files[i]));
-					table.Attach (nametext, 0u, 3u, j - 2, j-1);
-					table.Attach (nametext2, 4u, 7u, j - 2, j-1);
-					table.Attach (af,     0u, 3u, j - 1, j);
+					Label nametext = new Label (System.IO.Path.GetFileName (files [i]));
+					Label nametext2 = new Label (System.IO.Path.GetFileName (files [i]));
+					table.Attach (nametext, 0u, 3u, j - 2, j - 1);
+					table.Attach (nametext2, 4u, 7u, j - 2, j - 1);
+					table.Attach (af, 0u, 3u, j - 1, j);
 					table.Attach (sumbox, 3u, 4u, j - 1, j);
-					table.Attach (af2,    4u, 7u, j - 1, j);
+					table.Attach (af2, 4u, 7u, j - 1, j);
 				} catch (GLib.GException x) {
 					if (x.Source == "gdk-sharp") {
 						// Found a file that wasn't an image
@@ -222,24 +225,26 @@ namespace ImgDiff
 				//this.table1.Attach (null, 0u, 3u, j, this.table1.NRows);
 				table.Resize (Math.Max (1, j), table.NColumns);
 			}
-			if (0 == j)
-			{
-				Label infotext = new Label();
-				if (files.Length > 0)
-				{
-					infotext.Text = "All image files compared equal against the stored references files!\n" + String.Join("\n", imagefiles.ConvertAll( x => System.IO.Path.GetFileName(x)));
-					statusbartext("OK");
-				}
-				else if (!Directory.Exists (folder))
-				{
-					statusbartext("Folder " + folder + " does not exist.");
-				}
-				else
-					statusbartext("Found no image files in folder " + folder + ".");
-				table.Attach(infotext,0,3,0,1);
-			}
-			else
-				statusbartext(string.Format("{0} image{1} does not match reference image{1}", j/2, j==2?"":"s"));
+
+			if (0 == j) {
+				if (R2_Values.Count > 0) {
+					table.Attach (new Label ("All images were compared within the threshold to the stored references files!"),
+					              0, 7, 0, 1);
+
+					int noneidentical_thresholded = 0;
+					R2_Values.ForEach (x => noneidentical_thresholded += x < 1 ? 1 : 0 );
+					if (noneidentical_thresholded > 0)
+						statusbartext (string.Format ("OK ({0} image{1} not identical but within the threshold)",
+						                            noneidentical_thresholded,
+						                            noneidentical_thresholded == 1 ? " was" : "s were"));
+					else
+						statusbartext ("OK");
+				} else if (!Directory.Exists (folder)) {
+					statusbartext ("Folder " + folder + " does not exist.");
+				} else
+					statusbartext ("Found no image files in folder " + folder + ".");
+			} else
+				statusbartext (string.Format ("{0} image{1} does not match reference image{1}", j / 2, j == 2 ? "" : "s"));
 
 			if (scrolledwindow1.Child != null) {
 				Bin c = (scrolledwindow1.Child as Bin);
@@ -258,6 +263,17 @@ namespace ImgDiff
 			vbox.Add (table);
 			Box.BoxChild bc = ((Box.BoxChild)(vbox [table]));
 			bc.Expand = false;
+
+			if (R2_Values.Count > 0) {
+				Table sumtable = new Table(1, 7, false);
+				sumtable.Attach (new Label ("Files within threshold\n" 
+				                         + String.Join ("\n", imagefiles.ConvertAll (x => System.IO.Path.GetFileName (x)))),
+				              0, 6, j, j + 1);
+				sumtable.Attach (new Label ("R2\n" 
+				                         + String.Join ("\n", R2_Values.ConvertAll (x => x.ToString ()))),
+				              6, 7, j, j + 1);
+				vbox.Add (sumtable);
+			}
 			vbox.ShowAll();
 		}
 
@@ -454,10 +470,12 @@ namespace ImgDiff
 			Application.Quit ();
 		}
 
-		AspectFrame getDiff (AspectFrame newvalue, AspectFrame reference, out string diffstring, out bool equal)
+		AspectFrame getDiff (AspectFrame newvalue, AspectFrame reference, out string diffstring, out double r2)
 		{
+			// r2 as in http://en.wikipedia.org/wiki/Coefficient_of_determination
+
 			diffstring = "";
-			equal = false;
+			r2 = 0;
 
 			if (newvalue == null)
 				return null;
@@ -473,8 +491,8 @@ namespace ImgDiff
 			if (iB.Pixbuf == null)
 				return null;
 
-			Gdk.Pixbuf A = iA.Data["pixbuf"] as Gdk.Pixbuf;
-			Gdk.Pixbuf B = iB.Data["pixbuf"] as Gdk.Pixbuf;
+			Gdk.Pixbuf A = iA.Data ["pixbuf"] as Gdk.Pixbuf;
+			Gdk.Pixbuf B = iB.Data ["pixbuf"] as Gdk.Pixbuf;
 
 			if (A.Width != B.Width || A.Height != B.Height || A.Rowstride != B.Rowstride) {
 				diffstring = string.Format ("Different sizes!");
@@ -482,31 +500,39 @@ namespace ImgDiff
 			}
 
 			//Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
-			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone(); //new Gdk.Pixbuf(null, A.Width, A.Height );
+			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone (); //new Gdk.Pixbuf(null, A.Width, A.Height );
 			double v = 0;
+			double mean = 0;
+			double asum = 0;
 			unsafe {
 				byte* a = (byte*)A.Pixels;
 				byte* b = (byte*)B.Pixels;
 				byte* c = (byte*)C.Pixels;
 				for (int y=0; y<A.Height; ++y) {
 					for (int x=0; x<A.Rowstride; ++x) {
-						int o = y*A.Rowstride+x;
-						int d = Math.Abs (((int)a[o]) - (int)b[o]) / 2;
-						c[o] = (byte)d;
+						int o = y * A.Rowstride + x;
+						int d = Math.Abs (((int)a [o]) - (int)b [o]);
+						mean += a [o];
+						c [o] = (byte)(d / 2);
 						v += d * d;
+					}
+				}
+				mean /= (double)A.Height * A.Width;
+				for (int y=0; y<A.Height; ++y) {
+					for (int x=0; x<A.Rowstride; ++x) {
+						int o = y * A.Rowstride + x;
+						double d = a [o] - mean;
+						asum += d*d;
 					}
 				}
 			}
 
-
+			r2 = 1 - v/asum;
 			// Not actual percent, more like a hint on how much they differ
-			diffstring = string.Format("Diff: {0}", Math.Round(Math.Min(100, 100*Math.Sqrt(v)/(A.Height*A.Width))));
-			equal = (v == 0);
-			if (equal)
-				return null;
+			diffstring = r2.ToString("G");
 
 			Image uC = new Image(C);
-			return createWidget( uC.Pixbuf, "");
+			return createWidget( uC.Pixbuf, "diff");
 		}
 
 		void statusbartext (string text)
@@ -559,6 +585,18 @@ namespace ImgDiff
 				if ((l & 1)!=0) if (*((byte*)x1) != *((byte*)x2)) return false;
 				return true;
 			}
+		}
+
+		protected void OnEntryR2Changed (object sender, EventArgs e)
+		{
+			double R2 = R2_threshold;
+			double.TryParse (this.entryR2.Text, out R2);
+			R2 = Math.Max (0.01, Math.Min (1, R2));
+			if (R2 != R2_threshold) {
+				R2_threshold = R2;
+				WatcherUpdate (null);
+			}
+			this.entryR2.Text = R2.ToString("G");
 		}
 	}
 }
