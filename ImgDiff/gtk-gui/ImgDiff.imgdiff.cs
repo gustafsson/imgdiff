@@ -15,6 +15,7 @@ namespace ImgDiff
 		private global::Gtk.Entry entryWatchedFolder;
 		private global::Gtk.FileChooserButton filechooserbutton2;
 		private global::Gtk.ScrolledWindow scrolledwindow1;
+		private global::Gtk.Statusbar statusbar;
 		private global::Gtk.Image image3;
 		
 		protected virtual void Build ()
@@ -93,15 +94,25 @@ namespace ImgDiff
 			global::Gtk.Box.BoxChild w7 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
 			w7.Position = 2;
 			// Container child vbox1.Gtk.Box+BoxChild
-			this.image3 = new global::Gtk.Image ();
-			this.image3.Name = "image3";
-			this.image3.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-apply", global::Gtk.IconSize.Menu);
-			this.vbox1.Add (this.image3);
-			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
+			this.statusbar = new global::Gtk.Statusbar ();
+			this.statusbar.Name = "statusbar";
+			this.statusbar.Spacing = 6;
+			this.vbox1.Add (this.statusbar);
+			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.statusbar]));
 			w8.PackType = ((global::Gtk.PackType)(1));
 			w8.Position = 3;
 			w8.Expand = false;
 			w8.Fill = false;
+			// Container child vbox1.Gtk.Box+BoxChild
+			this.image3 = new global::Gtk.Image ();
+			this.image3.Name = "image3";
+			this.image3.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-apply", global::Gtk.IconSize.Menu);
+			this.vbox1.Add (this.image3);
+			global::Gtk.Box.BoxChild w9 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
+			w9.PackType = ((global::Gtk.PackType)(1));
+			w9.Position = 4;
+			w9.Expand = false;
+			w9.Fill = false;
 			this.Add (this.vbox1);
 			if ((this.Child != null)) {
 				this.Child.ShowAll ();

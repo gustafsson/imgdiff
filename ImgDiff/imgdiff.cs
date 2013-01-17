@@ -4,6 +4,7 @@ using Gtk;
 using System.Collections.Generic;
 using System.IO.IsolatedStorage;
 using System.Diagnostics;
+using System.Timers;
 
 /**
  * A doodle, merely a work in progess. There's close to not a single best practice being followed here.
@@ -14,20 +15,76 @@ namespace ImgDiff
 	{
 		FileSystemWatcher watcher_;
 		Dictionary<string,Image> images_;
+		Timer checkmodification_;
+		Dictionary<string,DateTime> lastwrites_;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
 		{
 			this.Build ();
 
+			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
+
 			this.images_ = new Dictionary<string,Image>();
 			this.watcher_ = new FileSystemWatcher ();
+			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
+			watcher_.Created += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
+			watcher_.Deleted += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
+			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate (e);
+			watcher_.Error += (object sender, ErrorEventArgs e) => WatcherUpdate (e);
 
-			this.entryWatchedFolder.TextInserted += HandleTextInserted;
-			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
+			lastwrites_ = new Dictionary<string, DateTime>();
+
+			checkmodification_ = new Timer(500);
+			checkmodification_.Elapsed += (sender, e) => CheckModifiedFiles();
+
+			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
+			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
+				if (new DirectoryInfo(this.entryWatchedFolder.Text).FullName == this.filechooserbutton2.CurrentFolder)
+					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
+			};
 			//this.filechooserbutton2.SetCurrentFolder(this.filechooserbutton2.CurrentFolder); // Call event handler
 
 			this.entryWatchedFolder.Text = "/Users/johan/Desktop/tmp";
+			checkmodification_.Start();
+		}
+
+		void CheckModifiedFiles ()
+		{
+			if (!this.watcher_.EnableRaisingEvents)
+				return;
+
+			string [] files = Directory.GetFiles (this.watcher_.Path);
+
+			Dictionary<string,DateTime> thesewrites_ = new Dictionary<string, DateTime> ();
+
+			foreach (string file in files) {
+				thesewrites_ [file] = Directory.GetLastWriteTimeUtc (file);
+			}
+			Dictionary<string,DateTime> prevwrites = lastwrites_;
+			lastwrites_ = thesewrites_;
+
+			foreach (KeyValuePair<string, DateTime> v in thesewrites_) {
+				if (!prevwrites.ContainsKey( v.Key )) // filesystemwatcher handles this
+					return;
+				if (!prevwrites[ v.Key ].Equals( v.Value))
+				{
+					images_.Remove( v.Key );
+					WatcherUpdate(null);
+					return;
+				}
+			}
+		}
+
+		void HandleUnhandledException (GLib.UnhandledExceptionArgs args)
+		{
+			Exception x = args.ExceptionObject as Exception;
+			if (x != null)
+				statusbartext( x.Message );
+			else
+				statusbartext("An unhandled exception occured. " + args.ExceptionObject.ToString());
+
+			System.Console.WriteLine (args.ExceptionObject.ToString());
 		}
 
 		protected void OnDeleteEvent (object sender, DeleteEventArgs a)
@@ -36,29 +93,26 @@ namespace ImgDiff
 			a.RetVal = true;
 		}
 
-		void HandleTextInserted (object o, TextInsertedArgs args)
+		void HandleNewWatchedFolder ()
 		{
 			string folder = this.entryWatchedFolder.Text;
 
-			if (!Directory.Exists(folder))
+			if (watcher_ != null && watcher_.EnableRaisingEvents == true && watcher_.Path == folder)
 				return;
 
-			if (watcher_ != null && watcher_.Path == folder)
-				return;
-
-			this.filechooserbutton2.SetCurrentFolder( folder );
-			watcher_.Path = folder;
-			watcher_.EnableRaisingEvents = true;
-			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
-			watcher_.Created += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
-			watcher_.Deleted += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate ();
-			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate ();
-			watcher_.Error += (object sender, ErrorEventArgs e) => WatcherUpdate ();
+			if (Directory.Exists (folder)) {
+				this.filechooserbutton2.SetCurrentFolder (folder);
+				//folder = this.filechooserbutton2.CurrentFolder;
+				watcher_.Path = folder;
+				watcher_.EnableRaisingEvents = true;
+			}
+			else
+				watcher_.EnableRaisingEvents = false;
 
 			Update();
 		}
 
-		void WatcherUpdate ()
+		void WatcherUpdate (EventArgs e)
 		{
 			Gtk.Application.Invoke( delegate {
 				Update();
@@ -70,7 +124,13 @@ namespace ImgDiff
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
 
-			string[] files = Directory.GetFiles (this.entryWatchedFolder.Text);
+			string[] files;
+			string folder = this.entryWatchedFolder.Text;
+			if (Directory.Exists (folder))
+				files = Directory.GetFiles (folder);
+			else
+				files = new string[0];
+
 			uint j = 0;
 
 			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
@@ -81,6 +141,9 @@ namespace ImgDiff
 			List<string> imagefiles = new List<string>();
 			for (int i=0; i<files.Length; ++i) {
 				try {
+					if (equalfiles(files [i]))
+						continue;
+
 					AspectFrame af = getImage (files [i]);
 					AspectFrame af2 = getReferenceImage (files [i]);
 
@@ -109,7 +172,7 @@ namespace ImgDiff
 					sumbox.Add (new VBox ());
 
 //					sumbox.Add (null);
-					int mywidth = 10;
+					int mywidth = 20;
 
 					Image arrow = new Image ();
 					arrow.Pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-go-forward", IconSize.LargeToolbar);
@@ -118,6 +181,7 @@ namespace ImgDiff
 					button.Add (arrow);
 					button.Clicked += (object sender, EventArgs e) => validateImage (af, af2);
 					sumbox.Add (button);
+					sumbox.Add (new VBox ());
 					Gdk.Pixbuf pixbuf;
 					if (af2.Child.Data ["pixbuf"] != null)
 						pixbuf = af2.Child.Data ["pixbuf"] as Gdk.Pixbuf;
@@ -126,22 +190,31 @@ namespace ImgDiff
 					int height = pixbuf.Height;
 					int width = pixbuf.Width;
 					this.SizeAllocated += (o, args) => {
-						sumbox.SetSizeRequest (mywidth, (this.Allocation.Width - mywidth) / 2 * height / width);
+						int scrollbarwidth = 20;
+						sumbox.SetSizeRequest (mywidth, (this.Allocation.Width - mywidth - scrollbarwidth) / 2 * height / width);
 					};
 
 					j+=2;
 
-					Label nametext = new Label();
-					nametext.Text = System.IO.Path.GetFileName(files[i]);
-					Label nametext2 = new Label();
-					nametext2.Text = System.IO.Path.GetFileName(files[i]);
+					Label nametext = new Label(System.IO.Path.GetFileName(files[i]));
+					Label nametext2 = new Label(System.IO.Path.GetFileName(files[i]));
 					table.Attach (nametext, 0u, 3u, j - 2, j-1);
-					table.Attach (nametext, 4u, 7u, j - 2, j-1);
-					table.Attach (af, 0u, 3u, j - 1, j);
+					table.Attach (nametext2, 4u, 7u, j - 2, j-1);
+					table.Attach (af,     0u, 3u, j - 1, j);
 					table.Attach (sumbox, 3u, 4u, j - 1, j);
-					table.Attach (af2, 4u, 7u, j - 1, j);
+					table.Attach (af2,    4u, 7u, j - 1, j);
+				} catch (GLib.GException x) {
+					if (x.Source == "gdk-sharp") {
+						// Found a file that wasn't an image
+					} else {
+						System.Console.WriteLine (x.Message);
+					}
 				} catch (Exception x) {
-					System.Console.WriteLine (x.Message);
+					if (x.Source == "gdk-sharp") {
+						// Found a file that wasn't an image
+					} else {
+						System.Console.WriteLine (x.Message);
+					}
 				}
 			}
 
@@ -153,11 +226,20 @@ namespace ImgDiff
 			{
 				Label infotext = new Label();
 				if (files.Length > 0)
-					infotext.Text = "All image files in this folder compared equal against the stored references files!\n" + String.Join("\n", imagefiles);
+				{
+					infotext.Text = "All image files compared equal against the stored references files!\n" + String.Join("\n", imagefiles.ConvertAll( x => System.IO.Path.GetFileName(x)));
+					statusbartext("OK");
+				}
+				else if (!Directory.Exists (folder))
+				{
+					statusbartext("Folder " + folder + " does not exist.");
+				}
 				else
-					infotext.Text = "Found no image files in this folder.";
+					statusbartext("Found no image files in folder " + folder + ".");
 				table.Attach(infotext,0,3,0,1);
 			}
+			else
+				statusbartext(string.Format("{0} image{1} does not match reference image{1}", j/2, j==2?"":"s"));
 
 			if (scrolledwindow1.Child != null) {
 				Bin c = (scrolledwindow1.Child as Bin);
@@ -171,9 +253,11 @@ namespace ImgDiff
 			this.images_ = newimages;
 
 			watch.Stop ();
-			System.Console.WriteLine (string.Format ("Updated {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, j));
+			System.Console.WriteLine (string.Format ("Updated {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, j/2));
 
 			vbox.Add (table);
+			Box.BoxChild bc = ((Box.BoxChild)(vbox [table]));
+			bc.Expand = false;
 			vbox.ShowAll();
 		}
 
@@ -397,18 +481,18 @@ namespace ImgDiff
 				return null;
 			}
 
-			Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
-
+			//Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
+			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone(); //new Gdk.Pixbuf(null, A.Width, A.Height );
 			double v = 0;
 			unsafe {
-				Int32* a = (Int32*)A.Pixels;
-				Int32* b = (Int32*)B.Pixels;
-				//byte* c = (byte*)C.Pixels;
+				byte* a = (byte*)A.Pixels;
+				byte* b = (byte*)B.Pixels;
+				byte* c = (byte*)C.Pixels;
 				for (int y=0; y<A.Height; ++y) {
-					for (int x=0; x<A.Rowstride/4; ++x) {
-						int o = y*A.Rowstride/4+x;
-						uint d = (uint)Math.Abs (((int)a[o]) - (int)b[o]) / 2;
-						C.PutPixel(x,y,d);
+					for (int x=0; x<A.Rowstride; ++x) {
+						int o = y*A.Rowstride+x;
+						int d = Math.Abs (((int)a[o]) - (int)b[o]) / 2;
+						c[o] = (byte)d;
 						v += d * d;
 					}
 				}
@@ -416,14 +500,65 @@ namespace ImgDiff
 
 
 			// Not actual percent, more like a hint on how much they differ
-			diffstring = string.Format("Diff: {0}", Math.Round(Math.Min(100, v/(double)(A.Height*A.Width*A.Height*A.Width))));
+			diffstring = string.Format("Diff: {0}", Math.Round(Math.Min(100, 100*Math.Sqrt(v)/(A.Height*A.Width))));
 			equal = (v == 0);
 			if (equal)
 				return null;
 
-			Image uC = new Image(C, null);
+			Image uC = new Image(C);
 			return createWidget( uC.Pixbuf, "");
 		}
 
+		void statusbartext (string text)
+		{
+			var contextId = this.statusbar.GetContextId("clicked");
+			this.statusbar.Push(contextId, text );
+		}
+
+		bool equalfiles (string path)
+		{
+			using (IsolatedStorageFile isoStore = this.isoStore()) {
+				string isopath = this.isopath (path);
+				if (!isoStore.FileExists (isopath))
+					return false;
+
+				using (IsolatedStorageFileStream input1 = isoStore.OpenFile(isopath, FileMode.Open)) {
+					using (FileStream input2 = new FileStream(path, FileMode.Open)) {
+						byte[] buffer1 = new byte[32768];
+						byte[] buffer2 = new byte[32768];
+						int read1, read2;
+						while (true) {
+							read1 = input1.Read (buffer1, 0, buffer1.Length);
+							read2 = input2.Read (buffer2, 0, buffer2.Length);
+							if (read1 != read2)
+								return false;
+							if (read1 <= 0)
+								break;
+							//if (!Array.Equals(buffer1, buffer2))
+							//    return false;
+							if (!UnsafeCompare(buffer1, buffer2))
+								return false;
+						}
+					}
+				}
+			}
+
+			return true;
+		}
+
+		static unsafe bool UnsafeCompare(byte[] a1, byte[] a2) {
+			if(a1==null || a2==null || a1.Length!=a2.Length)
+				return false;
+			fixed (byte* p1=a1, p2=a2) {
+				byte* x1=p1, x2=p2;
+				int l = a1.Length;
+				for (int i=0; i < l/8; i++, x1+=8, x2+=8)
+					if (*((long*)x1) != *((long*)x2)) return false;
+				if ((l & 4)!=0) { if (*((int*)x1)!=*((int*)x2)) return false; x1+=4; x2+=4; }
+				if ((l & 2)!=0) { if (*((short*)x1)!=*((short*)x2)) return false; x1+=2; x2+=2; }
+				if ((l & 1)!=0) if (*((byte*)x1) != *((byte*)x2)) return false;
+				return true;
+			}
+		}
 	}
 }
