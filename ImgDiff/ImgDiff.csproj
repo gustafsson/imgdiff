@@ -52,6 +52,8 @@
     <Compile Include="imgdiff.cs" />
     <Compile Include="gtk-gui\ImgDiff.imgdiff.cs" />
     <Compile Include="MessageBox.cs" />
+    <Compile Include="About.cs" />
+    <Compile Include="gtk-gui\ImgDiff.About.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

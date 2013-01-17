@@ -9,10 +9,29 @@
     <widget-library name="../bin/Debug/ImgDiff.exe" internal="true" />
   </import>
   <widget class="Gtk.Window" id="ImgDiff.imgdiff" design-size="596 363">
+    <action-group name="Default">
+      <action id="HelpAction">
+        <property name="Type">Action</property>
+        <property name="Label" translatable="yes">Help</property>
+        <property name="ShortLabel" translatable="yes">Help</property>
+      </action>
+      <action id="AboutAction">
+        <property name="Type">Action</property>
+        <property name="Label" translatable="yes">About</property>
+        <property name="ShortLabel" translatable="yes">About</property>
+        <signal name="Activated" handler="OnAboutActionActivated" />
+      </action>
+      <action id="QuitAction">
+        <property name="Type">Action</property>
+        <property name="Accelerator">&lt;Primary&gt;&lt;Mod2&gt;q</property>
+        <property name="Label" translatable="yes">Quit</property>
+        <property name="ShortLabel" translatable="yes">Quit</property>
+        <signal name="Activated" handler="OnQuitActionActivated" />
+      </action>
+    </action-group>
     <property name="MemberName" />
     <property name="Title" translatable="yes">imgdiff</property>
     <property name="WindowPosition">CenterOnParent</property>
-    <property name="BorderWidth">6</property>
     <property name="AllowShrink">True</property>
     <signal name="DeleteEvent" handler="OnDeleteEvent" />
     <child>
@@ -20,13 +39,30 @@
         <property name="MemberName" />
         <property name="Spacing">6</property>
         <child>
+          <widget class="Gtk.MenuBar" id="menubar2">
+            <property name="MemberName" />
+            <node name="menubar2" type="Menubar">
+              <node type="Menu" action="HelpAction">
+                <node type="Menuitem" action="AboutAction" />
+                <node type="Menuitem" action="QuitAction" />
+              </node>
+            </node>
+          </widget>
+          <packing>
+            <property name="Position">0</property>
+            <property name="AutoSize">False</property>
+            <property name="Expand">False</property>
+          </packing>
+        </child>
+        <child>
           <widget class="Gtk.HBox" id="hbox2">
             <property name="MemberName" />
             <property name="Spacing">6</property>
+            <property name="BorderWidth">6</property>
             <child>
               <widget class="Gtk.Label" id="label2">
                 <property name="MemberName" />
-                <property name="LabelProp" translatable="yes">Watched folder</property>
+                <property name="LabelProp" translatable="yes">Watched folder: </property>
               </widget>
               <packing>
                 <property name="Position">0</property>
@@ -60,7 +96,7 @@
             </child>
           </widget>
           <packing>
-            <property name="Position">0</property>
+            <property name="Position">1</property>
             <property name="AutoSize">True</property>
             <property name="Expand">False</property>
             <property name="Fill">False</property>
@@ -82,7 +118,7 @@
             </child>
           </widget>
           <packing>
-            <property name="Position">1</property>
+            <property name="Position">2</property>
             <property name="AutoSize">True</property>
           </packing>
         </child>
@@ -94,23 +130,151 @@
           </widget>
           <packing>
             <property name="PackType">End</property>
-            <property name="Position">2</property>
+            <property name="Position">3</property>
             <property name="AutoSize">True</property>
             <property name="Expand">False</property>
             <property name="Fill">False</property>
           </packing>
         </child>
+      </widget>
+    </child>
+  </widget>
+  <widget class="Gtk.Dialog" id="ImgDiff.About" design-size="848 300">
+    <property name="MemberName" />
+    <property name="WindowPosition">CenterOnParent</property>
+    <property name="Buttons">1</property>
+    <property name="HelpButton">False</property>
+    <child internal-child="VBox">
+      <widget class="Gtk.VBox" id="dialog1_VBox">
+        <property name="MemberName" />
+        <property name="BorderWidth">2</property>
         <child>
-          <widget class="Gtk.Entry" id="entry3">
+          <widget class="Gtk.VBox" id="vbox2">
             <property name="MemberName" />
-            <property name="CanFocus">True</property>
-            <property name="IsEditable">True</property>
-            <property name="InvisibleChar">●</property>
+            <property name="Spacing">6</property>
+            <child>
+              <widget class="Gtk.Label" id="label1">
+                <property name="MemberName" />
+                <property name="LabelProp" translatable="yes">imgdiff
+
+Simple tool for image comparsion. The idea is to make it easy to manually validate visual results.</property>
+              </widget>
+              <packing>
+                <property name="Position">0</property>
+                <property name="AutoSize">True</property>
+                <property name="Expand">False</property>
+                <property name="Fill">False</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder />
+            </child>
+            <child>
+              <widget class="Gtk.HBox" id="hbox1">
+                <property name="MemberName" />
+                <property name="Spacing">6</property>
+                <child>
+                  <widget class="Gtk.Label" id="label2">
+                    <property name="MemberName" />
+                    <property name="LabelProp" translatable="yes">imgdiffs database of approved results is currently occupying</property>
+                  </widget>
+                  <packing>
+                    <property name="Position">0</property>
+                    <property name="AutoSize">True</property>
+                    <property name="Expand">False</property>
+                    <property name="Fill">False</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="Gtk.Label" id="labelSpace">
+                    <property name="MemberName" />
+                    <property name="LabelProp" translatable="yes">label3</property>
+                  </widget>
+                  <packing>
+                    <property name="Position">1</property>
+                    <property name="AutoSize">True</property>
+                    <property name="Expand">False</property>
+                    <property name="Fill">False</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="Gtk.Entry" id="entry1">
+                    <property name="MemberName" />
+                    <property name="CanFocus">True</property>
+                    <property name="IsEditable">True</property>
+                    <property name="InvisibleChar">●</property>
+                    <signal name="EditingDone" handler="OnEntry1EditingDone" />
+                  </widget>
+                  <packing>
+                    <property name="Position">2</property>
+                    <property name="AutoSize">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="Gtk.Label" id="label4">
+                    <property name="MemberName" />
+                    <property name="LabelProp" translatable="yes">GB</property>
+                  </widget>
+                  <packing>
+                    <property name="Position">3</property>
+                    <property name="AutoSize">True</property>
+                    <property name="Expand">False</property>
+                    <property name="Fill">False</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="Gtk.Button" id="button9">
+                    <property name="MemberName" />
+                    <property name="CanFocus">True</property>
+                    <property name="Type">TextOnly</property>
+                    <property name="Label" translatable="yes">Discard database</property>
+                    <property name="Relief">Half</property>
+                    <signal name="Clicked" handler="OnButton9Clicked" />
+                  </widget>
+                  <packing>
+                    <property name="Position">4</property>
+                    <property name="AutoSize">True</property>
+                    <property name="Expand">False</property>
+                    <property name="Fill">False</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="PackType">End</property>
+                <property name="Position">2</property>
+                <property name="AutoSize">True</property>
+                <property name="Expand">False</property>
+                <property name="Fill">False</property>
+              </packing>
+            </child>
           </widget>
           <packing>
-            <property name="PackType">End</property>
-            <property name="Position">3</property>
+            <property name="Position">0</property>
             <property name="AutoSize">True</property>
+          </packing>
+        </child>
+      </widget>
+    </child>
+    <child internal-child="ActionArea">
+      <widget class="Gtk.HButtonBox" id="dialog1_ActionArea">
+        <property name="MemberName" />
+        <property name="Spacing">10</property>
+        <property name="BorderWidth">5</property>
+        <property name="Size">1</property>
+        <property name="LayoutStyle">End</property>
+        <child>
+          <widget class="Gtk.Button" id="buttonOk">
+            <property name="MemberName" />
+            <property name="CanDefault">True</property>
+            <property name="CanFocus">True</property>
+            <property name="UseStock">True</property>
+            <property name="Type">StockItem</property>
+            <property name="StockId">gtk-ok</property>
+            <property name="ResponseId">-5</property>
+            <signal name="Clicked" handler="OnButtonOkClicked" />
+            <property name="label">gtk-ok</property>
+          </widget>
+          <packing>
             <property name="Expand">False</property>
             <property name="Fill">False</property>
           </packing>

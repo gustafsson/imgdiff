@@ -18,13 +18,6 @@ namespace ImgDiff
 		public imgdiff () : 
 				base(WindowType.Toplevel)
 		{
-			// Clear isolated storage
-			//
-			// using (IsolatedStorageFile isoStore = this.isoStore()) {
-			//   foreach(string file in isoStore.GetFileNames())
-			//	   isoStore.DeleteFile(file);
-			// }
-
 			this.Build ();
 
 			this.images_ = new Dictionary<string,Image>();
@@ -83,7 +76,6 @@ namespace ImgDiff
 			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
 
 			Table table = new Table (Math.Max (1, (uint)files.Length), 3u, false);
-
 			for (int i=0; i<files.Length; ++i) {
 				try {
 					AspectFrame af = getImage (files [i]);
@@ -150,6 +142,7 @@ namespace ImgDiff
 				return image;
 
 			Gdk.Pixbuf pixbuf = null;
+			string tooltip="";
 
 			try {
 				using (IsolatedStorageFile isoStore = this.isoStore()) {
@@ -161,11 +154,14 @@ namespace ImgDiff
 					}
 				}
 			} catch (Exception x) {
+				tooltip = x.Message;
 				System.Console.WriteLine (x.Message);
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
 			}
 
-			return createWidget( pixbuf, isopath );
+			image = createWidget( pixbuf, isopath );
+			image.TooltipText = tooltip;
+			return image;
 		}
 
 
@@ -226,7 +222,6 @@ namespace ImgDiff
 			string isopath = this.isopath (path);
 
 			try {
-
 				using (IsolatedStorageFile isoStore = this.isoStore()) {
 					// copy file int o isolated storage
 					using (IsolatedStorageFileStream output = isoStore.OpenFile(isopath, FileMode.Create)) {
@@ -242,6 +237,7 @@ namespace ImgDiff
 			} catch (Exception x) {
 				System.Console.WriteLine (x.Message);
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
+				reference.TooltipText = x.Message;
 			}
 
 
@@ -306,5 +302,15 @@ namespace ImgDiff
 			return null;
 		}
 
+		protected void OnAboutActionActivated (object sender, EventArgs e)
+		{
+			About about = new About();
+			about.Show();
+		}
+		protected void OnQuitActionActivated (object sender, EventArgs e)
+		{
+			Destroy();
+			Application.Quit ();
+		}
 	}
 }

@@ -4,41 +4,66 @@ namespace ImgDiff
 {
 	public partial class imgdiff
 	{
+		private global::Gtk.UIManager UIManager;
+		private global::Gtk.Action HelpAction;
+		private global::Gtk.Action AboutAction;
+		private global::Gtk.Action QuitAction;
 		private global::Gtk.VBox vbox1;
+		private global::Gtk.MenuBar menubar2;
 		private global::Gtk.HBox hbox2;
 		private global::Gtk.Label label2;
 		private global::Gtk.Entry entryWatchedFolder;
 		private global::Gtk.FileChooserButton filechooserbutton2;
 		private global::Gtk.ScrolledWindow scrolledwindow1;
 		private global::Gtk.Image image3;
-		private global::Gtk.Entry entry3;
 		
 		protected virtual void Build ()
 		{
 			global::Stetic.Gui.Initialize (this);
 			// Widget ImgDiff.imgdiff
+			this.UIManager = new global::Gtk.UIManager ();
+			global::Gtk.ActionGroup w1 = new global::Gtk.ActionGroup ("Default");
+			this.HelpAction = new global::Gtk.Action ("HelpAction", global::Mono.Unix.Catalog.GetString ("Help"), null, null);
+			this.HelpAction.ShortLabel = global::Mono.Unix.Catalog.GetString ("Help");
+			w1.Add (this.HelpAction, null);
+			this.AboutAction = new global::Gtk.Action ("AboutAction", global::Mono.Unix.Catalog.GetString ("About"), null, null);
+			this.AboutAction.ShortLabel = global::Mono.Unix.Catalog.GetString ("About");
+			w1.Add (this.AboutAction, null);
+			this.QuitAction = new global::Gtk.Action ("QuitAction", global::Mono.Unix.Catalog.GetString ("Quit"), null, null);
+			this.QuitAction.ShortLabel = global::Mono.Unix.Catalog.GetString ("Quit");
+			w1.Add (this.QuitAction, "<Primary><Mod2>q");
+			this.UIManager.InsertActionGroup (w1, 0);
+			this.AddAccelGroup (this.UIManager.AccelGroup);
 			this.Name = "ImgDiff.imgdiff";
 			this.Title = global::Mono.Unix.Catalog.GetString ("imgdiff");
 			this.WindowPosition = ((global::Gtk.WindowPosition)(4));
-			this.BorderWidth = ((uint)(6));
 			this.AllowShrink = true;
 			// Container child ImgDiff.imgdiff.Gtk.Container+ContainerChild
 			this.vbox1 = new global::Gtk.VBox ();
 			this.vbox1.Name = "vbox1";
 			this.vbox1.Spacing = 6;
 			// Container child vbox1.Gtk.Box+BoxChild
+			this.UIManager.AddUiFromString ("<ui><menubar name='menubar2'><menu name='HelpAction' action='HelpAction'><menuitem name='AboutAction' action='AboutAction'/><menuitem name='QuitAction' action='QuitAction'/></menu></menubar></ui>");
+			this.menubar2 = ((global::Gtk.MenuBar)(this.UIManager.GetWidget ("/menubar2")));
+			this.menubar2.Name = "menubar2";
+			this.vbox1.Add (this.menubar2);
+			global::Gtk.Box.BoxChild w2 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.menubar2]));
+			w2.Position = 0;
+			w2.Expand = false;
+			// Container child vbox1.Gtk.Box+BoxChild
 			this.hbox2 = new global::Gtk.HBox ();
 			this.hbox2.Name = "hbox2";
 			this.hbox2.Spacing = 6;
+			this.hbox2.BorderWidth = ((uint)(6));
 			// Container child hbox2.Gtk.Box+BoxChild
 			this.label2 = new global::Gtk.Label ();
 			this.label2.Name = "label2";
-			this.label2.LabelProp = global::Mono.Unix.Catalog.GetString ("Watched folder");
+			this.label2.LabelProp = global::Mono.Unix.Catalog.GetString ("Watched folder: ");
 			this.hbox2.Add (this.label2);
-			global::Gtk.Box.BoxChild w1 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.label2]));
-			w1.Position = 0;
-			w1.Expand = false;
-			w1.Fill = false;
+			global::Gtk.Box.BoxChild w3 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.label2]));
+			w3.Position = 0;
+			w3.Expand = false;
+			w3.Fill = false;
 			// Container child hbox2.Gtk.Box+BoxChild
 			this.entryWatchedFolder = new global::Gtk.Entry ();
 			this.entryWatchedFolder.CanFocus = true;
@@ -46,49 +71,37 @@ namespace ImgDiff
 			this.entryWatchedFolder.IsEditable = true;
 			this.entryWatchedFolder.InvisibleChar = '●';
 			this.hbox2.Add (this.entryWatchedFolder);
-			global::Gtk.Box.BoxChild w2 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.entryWatchedFolder]));
-			w2.Position = 1;
+			global::Gtk.Box.BoxChild w4 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.entryWatchedFolder]));
+			w4.Position = 1;
 			// Container child hbox2.Gtk.Box+BoxChild
 			this.filechooserbutton2 = new global::Gtk.FileChooserButton (global::Mono.Unix.Catalog.GetString ("Select a Folder"), ((global::Gtk.FileChooserAction)(2)));
 			this.filechooserbutton2.Name = "filechooserbutton2";
 			this.hbox2.Add (this.filechooserbutton2);
-			global::Gtk.Box.BoxChild w3 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.filechooserbutton2]));
-			w3.Position = 2;
+			global::Gtk.Box.BoxChild w5 = ((global::Gtk.Box.BoxChild)(this.hbox2 [this.filechooserbutton2]));
+			w5.Position = 2;
 			this.vbox1.Add (this.hbox2);
-			global::Gtk.Box.BoxChild w4 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.hbox2]));
-			w4.Position = 0;
-			w4.Expand = false;
-			w4.Fill = false;
+			global::Gtk.Box.BoxChild w6 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.hbox2]));
+			w6.Position = 1;
+			w6.Expand = false;
+			w6.Fill = false;
 			// Container child vbox1.Gtk.Box+BoxChild
 			this.scrolledwindow1 = new global::Gtk.ScrolledWindow ();
 			this.scrolledwindow1.CanFocus = true;
 			this.scrolledwindow1.Name = "scrolledwindow1";
 			this.scrolledwindow1.ShadowType = ((global::Gtk.ShadowType)(1));
 			this.vbox1.Add (this.scrolledwindow1);
-			global::Gtk.Box.BoxChild w5 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
-			w5.Position = 1;
+			global::Gtk.Box.BoxChild w7 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.scrolledwindow1]));
+			w7.Position = 2;
 			// Container child vbox1.Gtk.Box+BoxChild
 			this.image3 = new global::Gtk.Image ();
 			this.image3.Name = "image3";
 			this.image3.Pixbuf = global::Stetic.IconLoader.LoadIcon (this, "gtk-apply", global::Gtk.IconSize.Menu);
 			this.vbox1.Add (this.image3);
-			global::Gtk.Box.BoxChild w6 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
-			w6.PackType = ((global::Gtk.PackType)(1));
-			w6.Position = 2;
-			w6.Expand = false;
-			w6.Fill = false;
-			// Container child vbox1.Gtk.Box+BoxChild
-			this.entry3 = new global::Gtk.Entry ();
-			this.entry3.CanFocus = true;
-			this.entry3.Name = "entry3";
-			this.entry3.IsEditable = true;
-			this.entry3.InvisibleChar = '●';
-			this.vbox1.Add (this.entry3);
-			global::Gtk.Box.BoxChild w7 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.entry3]));
-			w7.PackType = ((global::Gtk.PackType)(1));
-			w7.Position = 3;
-			w7.Expand = false;
-			w7.Fill = false;
+			global::Gtk.Box.BoxChild w8 = ((global::Gtk.Box.BoxChild)(this.vbox1 [this.image3]));
+			w8.PackType = ((global::Gtk.PackType)(1));
+			w8.Position = 3;
+			w8.Expand = false;
+			w8.Fill = false;
 			this.Add (this.vbox1);
 			if ((this.Child != null)) {
 				this.Child.ShowAll ();
@@ -98,6 +111,8 @@ namespace ImgDiff
 			this.image3.Hide ();
 			this.Show ();
 			this.DeleteEvent += new global::Gtk.DeleteEventHandler (this.OnDeleteEvent);
+			this.AboutAction.Activated += new global::System.EventHandler (this.OnAboutActionActivated);
+			this.QuitAction.Activated += new global::System.EventHandler (this.OnQuitActionActivated);
 		}
 	}
 }
