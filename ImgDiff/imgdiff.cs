@@ -13,10 +13,10 @@ namespace ImgDiff
 {
 	public partial class imgdiff : Window
 	{
-		Dictionary<string,Image> images_;
 		double R2_threshold;
 
 		FixedFileWatcher FixedFileWatcher_;
+		ImageCache ImageCache_;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
@@ -30,15 +30,14 @@ namespace ImgDiff
 			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
+			ImageCache_ = new ImageCache();
 			FixedFileWatcher_ = new FixedFileWatcher();
 			FixedFileWatcher_.Changed += (object sender, string[] files) => {
 				Gtk.Application.Invoke( delegate {
-					foreach(string file in files) images_.Remove( file );
+					ImageCache_.prune(files);
 					Update();
 				});
 			};
-
-			this.images_ = new Dictionary<string,Image>();
 
 			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
@@ -88,6 +87,7 @@ namespace ImgDiff
 		void Update ()
 		{
 			updateSettings();
+			ImageCache_.flagToPrune();
 
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
@@ -100,8 +100,6 @@ namespace ImgDiff
 				files = new string[0];
 
 			uint j = 0;
-
-			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
 
 			Table table = new Table (Math.Max (1, 2 * (uint)files.Length), 7u, false);
 			Gdk.Color col = new Gdk.Color ();
@@ -120,8 +118,8 @@ namespace ImgDiff
 					AspectFrame af = getImage (files [i]);
 					AspectFrame af2 = getReferenceImage (files [i]);
 
-					updateCache (newimages, af);
-					updateCache (newimages, af2);
+					ImageCache_.updateCache (af.Child as Image);
+					ImageCache_.updateCache (af2.Child as Image);
 
 					VBox sumbox = new VBox ();
 
@@ -223,7 +221,7 @@ namespace ImgDiff
 			VBox vbox = new VBox ();
 			scrolledwindow1.AddWithViewport (vbox);
 
-			this.images_ = newimages;
+			ImageCache_.prune();
 
 			watch.Stop ();
 			System.Console.WriteLine (string.Format ("Updated {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, j/2));
@@ -245,9 +243,10 @@ namespace ImgDiff
 			vbox.ShowAll();
 		}
 
+
 		AspectFrame getImage (string path)
 		{
-			AspectFrame image = fromCache(path);
+			AspectFrame image = ImageCache_.fromCache(path);
 			if (image != null)
 				return image;
 
@@ -259,7 +258,7 @@ namespace ImgDiff
 		{
 			string isopath = this.isopath (path);
 
-			AspectFrame image = fromCache(isopath);
+			AspectFrame image = ImageCache_.fromCache(isopath);
 			if (image != null)
 				return image;
 
@@ -402,28 +401,6 @@ namespace ImgDiff
 			{
 				output.Write (buffer, 0, read);
 			}
-		}
-
-		void updateCache( Dictionary<string,Image> newimages, AspectFrame af )
-		{
-			Image im = af.Child as Image;
-			newimages [im.Data["path"] as string] = im;
-		}
-
-		AspectFrame fromCache(string path)
-		{
-			if (images_.ContainsKey (path)) {
-				AspectFrame af = new AspectFrame(null, 0.5f, 0.5f, 1, false);
-				Image image = images_ [path];
-				Gdk.Pixbuf pixbuf = image.Data["pixbuf"] as Gdk.Pixbuf;
-				if (pixbuf != null)
-					af.Set( 0.5f, 0.5f, pixbuf.Width/(float)pixbuf.Height, false );
-
-				image.Reparent(af);
-
-				return af;
-			}
-			return null;
 		}
 
 		protected void OnAboutActionActivated (object sender, EventArgs e)
