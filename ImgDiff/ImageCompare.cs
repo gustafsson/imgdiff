@@ -20,7 +20,8 @@ namespace ImgDiff
 			//Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
 			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone (); //new Gdk.Pixbuf(null, A.Width, A.Height );
 			double v = 0;
-			double mean = 0;
+			double amean = 0;
+			double cmean = 0;
 			double asum = 0;
 			unsafe {
 				byte* a = (byte*)A.Pixels;
@@ -29,18 +30,24 @@ namespace ImgDiff
 				for (int y=0; y<A.Height; ++y) {
 					for (int x=0; x<A.Rowstride; ++x) {
 						int o = y * A.Rowstride + x;
-						int d = Math.Abs (((int)a [o]) - (int)b [o]);
-						mean += a [o];
-						c [o] = (byte)(d / 2);
+						byte d = (byte)Math.Abs (((int)a [o]) - (int)b [o]);
+						amean += a [o];
+						c [o] = d;
+						cmean += d;
 						v += d * d;
 					}
 				}
-				mean /= (double)A.Height * A.Width;
+				amean /= (double)A.Height * A.Rowstride;
+				cmean /= (double)A.Height * A.Rowstride;
+
+				double scale = Math.Max(1, 32.0/cmean);
+				// Compute R2 denominator sum from 'a', and normalize 'c'
 				for (int y=0; y<A.Height; ++y) {
 					for (int x=0; x<A.Rowstride; ++x) {
 						int o = y * A.Rowstride + x;
-						double d = a [o] - mean;
+						double d = a[o] - amean;
 						asum += d*d;
+						c[o] = (byte)Math.Min (255.0, c[o]*scale);
 					}
 				}
 			}
