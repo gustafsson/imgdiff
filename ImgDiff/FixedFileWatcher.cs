@@ -19,7 +19,7 @@ namespace ImgDiff
 			set {
 				CheckModifiedFiles_.Path = value;
 				if (Directory.Exists (value)) {
-					watcher_ = value;
+					watcher_.Path = value;
 					watcher_.EnableRaisingEvents = true;
 				} else
 					watcher_.EnableRaisingEvents = false;

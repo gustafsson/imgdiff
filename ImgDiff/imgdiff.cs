@@ -23,9 +23,11 @@ namespace ImgDiff
 		{
 			this.Build ();
 
+			MySettings settings = MySettings.load();
+
 			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
 
-			R2_threshold = 0.9999;
+			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
 			FixedFileWatcher_ = new FixedFileWatcher();
@@ -47,7 +49,7 @@ namespace ImgDiff
 				}
 			};
 
-			this.filechooserbutton2.SetCurrentFolder( this.filechooserbutton2.CurrentFolder );
+			this.entryWatchedFolder.Text = settings.Path;
 		}
 
 
@@ -72,21 +74,21 @@ namespace ImgDiff
 		void HandleNewWatchedFolder ()
 		{
 			string folder = this.entryWatchedFolder.Text;
-			FixedFileWatcher_.Path = folder;
-
-			if (watcher_ != null && watcher_.EnableRaisingEvents == true && watcher_.Path == folder)
+			if (FixedFileWatcher_.Path == folder)
 				return;
 
-			if (Directory.Exists (folder)) {
+			FixedFileWatcher_.Path = folder;
+
+			if (Directory.Exists (folder))
 				this.filechooserbutton2.SetCurrentFolder (folder);
-				watcher_.Path = folder;
-			}
 
 			Update();
 		}
 
 		void Update ()
 		{
+			updateSettings();
+
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
 
@@ -508,9 +510,16 @@ namespace ImgDiff
 			R2 = Math.Max (0.01, Math.Min (1, R2));
 			if (R2 != R2_threshold) {
 				R2_threshold = R2;
-				WatcherUpdate (null);
+				Update ();
 			}
 			this.entryR2.Text = R2.ToString("G");
+		}
+
+		void updateSettings() {
+			MySettings settings = new MySettings();
+			settings.R2_Threshold = this.R2_threshold;
+			settings.Path = this.entryWatchedFolder.Text;
+			settings.save();
 		}
 	}
 }
