@@ -15,9 +15,9 @@ namespace ImgDiff
 	{
 		FileSystemWatcher watcher_;
 		Dictionary<string,Image> images_;
-		Timer checkmodification_;
-		Dictionary<string,DateTime> lastwrites_;
 		double R2_threshold;
+
+		CheckModifiedFiles CheckModifiedFiles_;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
@@ -29,6 +29,12 @@ namespace ImgDiff
 			R2_threshold = 0.9999;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
+			CheckModifiedFiles_ = new CheckModifiedFiles();
+			CheckModifiedFiles_.FoundModifiedFile += (object sender, string[] files) => {
+				foreach(string file in files) images_.Remove( file );
+				WatcherUpdate( null );
+			};
+
 			this.images_ = new Dictionary<string,Image>();
 			this.watcher_ = new FileSystemWatcher ();
 			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
@@ -37,48 +43,19 @@ namespace ImgDiff
 			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate (e);
 			watcher_.Error += (object sender, ErrorEventArgs e) => WatcherUpdate (e);
 
-			lastwrites_ = new Dictionary<string, DateTime>();
-
-			checkmodification_ = new Timer(500);
-			checkmodification_.Elapsed += (sender, e) => CheckModifiedFiles();
-
 			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
-				if (new DirectoryInfo(this.entryWatchedFolder.Text).FullName != this.filechooserbutton2.CurrentFolder)
-					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
-			};
-			//this.filechooserbutton2.SetCurrentFolder(this.filechooserbutton2.CurrentFolder); // Call event handler
-
-			this.entryWatchedFolder.Text = "/Users/johan/Desktop/tmp";
-			checkmodification_.Start();
-		}
-
-		void CheckModifiedFiles ()
-		{
-			if (!this.watcher_.EnableRaisingEvents)
-				return;
-
-			string [] files = Directory.GetFiles (this.watcher_.Path);
-
-			Dictionary<string,DateTime> thesewrites_ = new Dictionary<string, DateTime> ();
-
-			foreach (string file in files) {
-				thesewrites_ [file] = Directory.GetLastWriteTimeUtc (file);
-			}
-			Dictionary<string,DateTime> prevwrites = lastwrites_;
-			lastwrites_ = thesewrites_;
-
-			foreach (KeyValuePair<string, DateTime> v in thesewrites_) {
-				if (!prevwrites.ContainsKey( v.Key )) // filesystemwatcher handles this
-					return;
-				if (!prevwrites[ v.Key ].Equals( v.Value))
+				if ( string.IsNullOrWhiteSpace(this.entryWatchedFolder.Text)
+				    || new DirectoryInfo(this.entryWatchedFolder.Text).FullName != this.filechooserbutton2.CurrentFolder)
 				{
-					images_.Remove( v.Key );
-					WatcherUpdate(null);
-					return;
+					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
 				}
-			}
+			};
+
+			this.filechooserbutton2.SetCurrentFolder( this.filechooserbutton2.CurrentFolder );
 		}
+
+
 
 		void HandleUnhandledException (GLib.UnhandledExceptionArgs args)
 		{
@@ -106,8 +83,8 @@ namespace ImgDiff
 
 			if (Directory.Exists (folder)) {
 				this.filechooserbutton2.SetCurrentFolder (folder);
-				//folder = this.filechooserbutton2.CurrentFolder;
 				watcher_.Path = folder;
+				CheckModifiedFiles_.Path = folder;
 				watcher_.EnableRaisingEvents = true;
 			}
 			else
@@ -147,7 +124,11 @@ namespace ImgDiff
 			for (int i=0; i<files.Length; ++i) {
 				try {
 					if (equalfiles (files [i]))
+					{
+						imagefiles.Add (files [i]);
+						R2_Values.Add (1);
 						continue;
+					}
 
 					AspectFrame af = getImage (files [i]);
 					AspectFrame af2 = getReferenceImage (files [i]);
@@ -523,7 +504,7 @@ namespace ImgDiff
 								break;
 							//if (!Array.Equals(buffer1, buffer2))
 							//    return false;
-							if (!UnsafeCompare(buffer1, buffer2))
+							if (!ImageCompare.UnsafeCompare(buffer1, buffer2))
 								return false;
 						}
 					}
@@ -533,20 +514,7 @@ namespace ImgDiff
 			return true;
 		}
 
-		static unsafe bool UnsafeCompare(byte[] a1, byte[] a2) {
-			if(a1==null || a2==null || a1.Length!=a2.Length)
-				return false;
-			fixed (byte* p1=a1, p2=a2) {
-				byte* x1=p1, x2=p2;
-				int l = a1.Length;
-				for (int i=0; i < l/8; i++, x1+=8, x2+=8)
-					if (*((long*)x1) != *((long*)x2)) return false;
-				if ((l & 4)!=0) { if (*((int*)x1)!=*((int*)x2)) return false; x1+=4; x2+=4; }
-				if ((l & 2)!=0) { if (*((short*)x1)!=*((short*)x2)) return false; x1+=2; x2+=2; }
-				if ((l & 1)!=0) if (*((byte*)x1) != *((byte*)x2)) return false;
-				return true;
-			}
-		}
+
 
 		protected void OnEntryR2Changed (object sender, EventArgs e)
 		{
