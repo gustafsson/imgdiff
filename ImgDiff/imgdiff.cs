@@ -495,8 +495,8 @@ namespace ImgDiff
 			Gdk.Pixbuf B = iB.Data ["pixbuf"] as Gdk.Pixbuf;
 
 			if (A.Width != B.Width || A.Height != B.Height || A.Rowstride != B.Rowstride) {
-				diffstring = string.Format ("Different sizes!");
-				return null;
+				B = B.ScaleSimple(A.Width, A.Height, Gdk.InterpType.Nearest);
+				diffstring = string.Format ("Different sizes!\n");
 			}
 
 			//Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
@@ -529,7 +529,7 @@ namespace ImgDiff
 
 			r2 = 1 - v/asum;
 			// Not actual percent, more like a hint on how much they differ
-			diffstring = r2.ToString("G");
+			diffstring += r2.ToString("G");
 
 			Image uC = new Image(C);
 			return createWidget( uC.Pixbuf, "diff");
