@@ -75,26 +75,71 @@ namespace ImgDiff
 
 			Dictionary<string,Image> newimages = new Dictionary<string,Image> ();
 
-			Table table = new Table (Math.Max (1, (uint)files.Length), 3u, false);
+			Table table = new Table (Math.Max (1, 2*(uint)files.Length), 7u, false);
+			Gdk.Color col = new Gdk.Color ();
+			Gdk.Color.Parse ("red", ref col);
+			List<string> imagefiles = new List<string>();
 			for (int i=0; i<files.Length; ++i) {
 				try {
 					AspectFrame af = getImage (files [i]);
 					AspectFrame af2 = getReferenceImage (files [i]);
 
+					imagefiles.Add(files[i]);
+
 					updateCache (newimages, af);
 					updateCache (newimages, af2);
+
+					VBox sumbox = new VBox ();
+
+					string diffstring;
+					bool equal = false;
+					AspectFrame af3 = getDiff (af, af2, out diffstring, out equal);
+					if (equal)
+						continue;
+
+					if (af3 != null)
+						sumbox.Add (af3);
+
+					Label infotext = new Label ();
+					infotext.Text = diffstring;
+//					sumbox.Add (null);
+//					table.ModifyBg(StateType.Normal, col);
+
+					sumbox.Add (infotext);
+					sumbox.Add (new VBox ());
+
+//					sumbox.Add (null);
+					int mywidth = 10;
 
 					Image arrow = new Image ();
 					arrow.Pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-go-forward", IconSize.LargeToolbar);
 					Button button = new Button ();
+					button.SetSizeRequest (mywidth, 15);
 					button.Add (arrow);
 					button.Clicked += (object sender, EventArgs e) => validateImage (af, af2);
+					sumbox.Add (button);
+					Gdk.Pixbuf pixbuf;
+					if (af2.Child.Data ["pixbuf"] != null)
+						pixbuf = af2.Child.Data ["pixbuf"] as Gdk.Pixbuf;
+					else
+						pixbuf = af.Child.Data ["pixbuf"] as Gdk.Pixbuf;
+					int height = pixbuf.Height;
+					int width = pixbuf.Width;
+					this.SizeAllocated += (o, args) => {
+						sumbox.SetSizeRequest (mywidth, (this.Allocation.Width - mywidth) / 2 * height / width);
+					};
 
-					j++;
+					j+=2;
 
-					table.Attach (af, 0u, 1u, j - 1, j);
-					table.Attach (button, 1u, 2u, j - 1, j);
-					table.Attach (af2, 2u, 3u, j - 1, j);
+					Label nametext = new Label();
+					nametext.Text = System.IO.Path.GetFileName(files[i]);
+					Label nametext2 = new Label();
+					nametext2.Text = System.IO.Path.GetFileName(files[i]);
+					table.Attach (nametext, 0u, 3u, j - 2, j-1);
+					table.Attach (nametext, 4u, 7u, j - 2, j-1);
+					table.Attach (af, 0u, 3u, j - 1, j);
+					table.Attach (sumbox, 3u, 4u, j - 1, j);
+					table.Attach (af2, 4u, 7u, j - 1, j);
 				} catch (Exception x) {
 					System.Console.WriteLine (x.Message);
 				}
@@ -103,6 +148,15 @@ namespace ImgDiff
 			if (j < table.NRows) {
 				//this.table1.Attach (null, 0u, 3u, j, this.table1.NRows);
 				table.Resize (Math.Max (1, j), table.NColumns);
+			}
+			if (0 == j)
+			{
+				Label infotext = new Label();
+				if (files.Length > 0)
+					infotext.Text = "All image files in this folder compared equal against the stored references files!\n" + String.Join("\n", imagefiles);
+				else
+					infotext.Text = "Found no image files in this folder.";
+				table.Attach(infotext,0,3,0,1);
 			}
 
 			if (scrolledwindow1.Child != null) {
@@ -237,7 +291,7 @@ namespace ImgDiff
 			} catch (Exception x) {
 				System.Console.WriteLine (x.Message);
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
-				reference.TooltipText = x.Message;
+				//reference.TooltipText = x.Message;
 			}
 
 
@@ -248,6 +302,8 @@ namespace ImgDiff
 
 
 			reference.ShowAll ();
+
+			Update();
 		}
 
 		string isopath(string path)
@@ -307,10 +363,67 @@ namespace ImgDiff
 			About about = new About();
 			about.Show();
 		}
+
 		protected void OnQuitActionActivated (object sender, EventArgs e)
 		{
 			Destroy();
 			Application.Quit ();
 		}
+
+		AspectFrame getDiff (AspectFrame newvalue, AspectFrame reference, out string diffstring, out bool equal)
+		{
+			diffstring = "";
+			equal = false;
+
+			if (newvalue == null)
+				return null;
+
+			if (reference == null)
+				return null;
+
+			Image iA = reference.Child as Gtk.Image;
+			Image iB = newvalue.Child as Gtk.Image;
+
+			if (iA.Pixbuf == null)
+				return null;
+			if (iB.Pixbuf == null)
+				return null;
+
+			Gdk.Pixbuf A = iA.Data["pixbuf"] as Gdk.Pixbuf;
+			Gdk.Pixbuf B = iB.Data["pixbuf"] as Gdk.Pixbuf;
+
+			if (A.Width != B.Width || A.Height != B.Height || A.Rowstride != B.Rowstride) {
+				diffstring = string.Format ("Different sizes!");
+				return null;
+			}
+
+			Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
+
+			double v = 0;
+			unsafe {
+				Int32* a = (Int32*)A.Pixels;
+				Int32* b = (Int32*)B.Pixels;
+				//byte* c = (byte*)C.Pixels;
+				for (int y=0; y<A.Height; ++y) {
+					for (int x=0; x<A.Rowstride/4; ++x) {
+						int o = y*A.Rowstride/4+x;
+						uint d = (uint)Math.Abs (((int)a[o]) - (int)b[o]) / 2;
+						C.PutPixel(x,y,d);
+						v += d * d;
+					}
+				}
+			}
+
+
+			// Not actual percent, more like a hint on how much they differ
+			diffstring = string.Format("Diff: {0}", Math.Round(Math.Min(100, v/(double)(A.Height*A.Width*A.Height*A.Width))));
+			equal = (v == 0);
+			if (equal)
+				return null;
+
+			Image uC = new Image(C, null);
+			return createWidget( uC.Pixbuf, "");
+		}
+
 	}
 }

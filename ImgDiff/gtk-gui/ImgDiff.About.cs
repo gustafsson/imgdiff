@@ -81,7 +81,7 @@ namespace ImgDiff
 			this.button9 = new global::Gtk.Button ();
 			this.button9.CanFocus = true;
 			this.button9.Name = "button9";
-			this.button9.UseUnderline = true;
+			this.button9.Relief = ((global::Gtk.ReliefStyle)(1));
 			this.button9.Label = global::Mono.Unix.Catalog.GetString ("Discard database");
 			this.hbox1.Add (this.button9);
 			global::Gtk.Box.BoxChild w7 = ((global::Gtk.Box.BoxChild)(this.hbox1 [this.button9]));
@@ -123,7 +123,7 @@ namespace ImgDiff
 			this.Show ();
 			this.entry1.EditingDone += new global::System.EventHandler (this.OnEntry1EditingDone);
 			this.button9.Clicked += new global::System.EventHandler (this.OnButton9Clicked);
-			this.buttonOk.Activated += new global::System.EventHandler (this.OnButtonOkActivated);
+			this.buttonOk.Clicked += new global::System.EventHandler (this.OnButtonOkClicked);
 		}
 	}
 }

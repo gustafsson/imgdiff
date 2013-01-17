@@ -41,7 +41,7 @@
         <child>
           <widget class="Gtk.MenuBar" id="menubar2">
             <property name="MemberName" />
-            <node name="menubar2" type="Menubar">
+            <node name="__gtksharp_99_Stetic_Editor_ActionMenuBar" type="Menubar">
               <node type="Menu" action="HelpAction">
                 <node type="Menuitem" action="AboutAction" />
                 <node type="Menuitem" action="QuitAction" />
@@ -106,7 +106,7 @@
           <widget class="Gtk.ScrolledWindow" id="scrolledwindow1">
             <property name="MemberName" />
             <property name="CanFocus">True</property>
-            <property name="ShadowType">In</property>
+            <property name="HscrollbarPolicy">Never</property>
             <child>
               <widget class="Gtk.Viewport" id="GtkViewport">
                 <property name="MemberName" />
