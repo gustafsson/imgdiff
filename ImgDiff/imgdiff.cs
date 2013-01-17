@@ -13,11 +13,10 @@ namespace ImgDiff
 {
 	public partial class imgdiff : Window
 	{
-		FileSystemWatcher watcher_;
 		Dictionary<string,Image> images_;
 		double R2_threshold;
 
-		CheckModifiedFiles CheckModifiedFiles_;
+		FixedFileWatcher FixedFileWatcher_;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
@@ -29,19 +28,15 @@ namespace ImgDiff
 			R2_threshold = 0.9999;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
-			CheckModifiedFiles_ = new CheckModifiedFiles();
-			CheckModifiedFiles_.FoundModifiedFile += (object sender, string[] files) => {
-				foreach(string file in files) images_.Remove( file );
-				WatcherUpdate( null );
+			FixedFileWatcher_ = new FixedFileWatcher();
+			FixedFileWatcher_.Changed += (object sender, string[] files) => {
+				Gtk.Application.Invoke( delegate {
+					foreach(string file in files) images_.Remove( file );
+					Update();
+				});
 			};
 
 			this.images_ = new Dictionary<string,Image>();
-			this.watcher_ = new FileSystemWatcher ();
-			watcher_.Changed += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Created += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Deleted += (object sender, System.IO.FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate (e);
-			watcher_.Error += (object sender, ErrorEventArgs e) => WatcherUpdate (e);
 
 			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
@@ -77,6 +72,7 @@ namespace ImgDiff
 		void HandleNewWatchedFolder ()
 		{
 			string folder = this.entryWatchedFolder.Text;
+			FixedFileWatcher_.Path = folder;
 
 			if (watcher_ != null && watcher_.EnableRaisingEvents == true && watcher_.Path == folder)
 				return;
@@ -84,20 +80,9 @@ namespace ImgDiff
 			if (Directory.Exists (folder)) {
 				this.filechooserbutton2.SetCurrentFolder (folder);
 				watcher_.Path = folder;
-				CheckModifiedFiles_.Path = folder;
-				watcher_.EnableRaisingEvents = true;
 			}
-			else
-				watcher_.EnableRaisingEvents = false;
 
 			Update();
-		}
-
-		void WatcherUpdate (EventArgs e)
-		{
-			Gtk.Application.Invoke( delegate {
-				Update();
-			});
 		}
 
 		void Update ()

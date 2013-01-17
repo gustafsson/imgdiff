@@ -58,6 +58,7 @@
     <Compile Include="gtk-gui\ImgDiff.About.cs" />
     <Compile Include="ImageCompare.cs" />
     <Compile Include="CheckModifiedFiles.cs" />
+    <Compile Include="FixedFileWatcher.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
