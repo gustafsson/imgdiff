@@ -4,22 +4,34 @@ using System.IO;
 using Gdk;
 using System.Collections.Generic;
 using System.Timers;
+using System.Threading;
 
 namespace ImgDiff
 {
 	public class DiffComputer
 	{
-		object DiffListLock_ = new object();
+		public class DiffResult 
+		{
+			public List<PixbufDiff> List { get; private set; }
+			public string Path { get; private set; }
 
-		public List<PixbufDiff> DiffList {
+			public DiffResult(List<PixbufDiff> List, string Path) {
+				this.List = List;
+				this.Path = Path;
+			}
+		}
+
+		object DiffResultLock_ = new object();
+
+		public DiffResult Diff {
 			get {
-				lock (DiffListLock_) {
-					return new List<PixbufDiff> (DiffList_);
+				lock (DiffResultLock_) {
+					return DiffResult_;
 				}
 			}
 			private set {
-				lock (DiffListLock_) {
-					DiffList_ = value;
+				lock (DiffResultLock_) {
+					DiffResult_ = value;
 				}
 			}
 		}
@@ -30,7 +42,8 @@ namespace ImgDiff
 			}
 			set {
 				FixedFileWatcher_.Path = value;
-				recopmuteDiff();
+
+				LaunchRecompute();
 			}
 		}
 
@@ -40,55 +53,63 @@ namespace ImgDiff
 		FixedFileWatcher FixedFileWatcher_;
 		PixbufCache PixbufCache_;
 		PixbufCache ReferenceCache_;
-		List<PixbufDiff> DiffList_;
+		DiffResult DiffResult_;
+		object recopmuteThreadLock_ = new object();
+		Thread recomputeThread_;
 
 		public DiffComputer ()
 		{
 			PixbufCache_ = new PixbufCache();
 			ReferenceCache_ = new PixbufCache();
-			
+			recomputeThread_ = null;
 			FixedFileWatcher_ = new FixedFileWatcher();
 			FixedFileWatcher_.Changed += (object sender, string[] files) => {
 				PixbufCache_.prune(files);
-				recopmuteDiff();
+				LaunchRecompute();
 			};
-
-			recopmuteDiff();
 		}
 
-		void recopmuteDiff()
+		public void LaunchRecompute ()
+		{
+			// Launch DiffComputer in a new thread.
+			lock (recopmuteThreadLock_) {
+				if (recomputeThread_ != null) {
+					recomputeThread_.Abort ();
+					recomputeThread_.Join ();
+				}
+				recomputeThread_ = new Thread(this.recomputeDiff);
+				recomputeThread_.Start();
+			}
+		}
+
+		void recomputeDiff ()
 		{
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
-			
+	
 			string[] files;
 			string folder = Path;
 			if (Directory.Exists (folder))
 				files = Directory.GetFiles (folder);
 			else
 				files = new string[0];
-			
+	
 			PixbufCache_.flagToPrune ();
 			ReferenceCache_.flagToPrune ();
 			List<PixbufDiff> diffs = new List<PixbufDiff> ();
 			for (int i=0; i<files.Length; ++i) {
-				string path = files[i];
+				string path = trim (files [i]);
 				PixbufDiff diff;
-				if (ReferenceStore.equalfiles (files [i]))
-				{
-					diff = new PixbufDiff(null, null, files[i]);
-				}
-				else
-				{
+				if (ReferenceStore.equalfiles (files [i])) {
+					diff = new PixbufDiff (null, null, files [i]);
+				} else {
 					Pixbuf A = PixbufCache_.fromCache (path);
 					if (A == null) {
-						try
-						{
+						try {
 							A = new Pixbuf (path);
 							PixbufCache_.updateCache (path, A);
 						} catch (GLib.GException x) {
 							if (x.Source == "gdk-sharp") {
-								System.Console.WriteLine (x.Message);
 								// Not an image file
 							} else {
 								System.Console.WriteLine (x.Message);
@@ -96,7 +117,6 @@ namespace ImgDiff
 							continue;
 						} catch (Exception x) {
 							if (x.Source == "gdk-sharp") {
-								System.Console.WriteLine (x.Message);
 								// Not an image file
 							} else {
 								System.Console.WriteLine (x.Message);
@@ -104,37 +124,48 @@ namespace ImgDiff
 							continue;
 						}
 					}
-					
+			
 					Pixbuf B = ReferenceCache_.fromCache (path);
 					if (B == null) {
-						try
-						{
+						try {
 							B = ReferenceStore.getReferenceImage (path);
-							ReferenceCache_.updateCache (path, B);
+							if (B != null)
+								ReferenceCache_.updateCache (path, B);
 						} catch (Exception x) {
 							B = imgdiff.ErrorPixbuf;
-							B.Data["tooltip"] = x.Message;
+							B.Data ["tooltip"] = x.Message;
 						}
 					}
-					
+			
 					// Compute a diff
-					diff = new PixbufDiff(A, B, path);
+					diff = new PixbufDiff (A, B, path);
 				}
-				
-				diffs.Add(diff);
+		
+				diffs.Add (diff);
 			}
-			
-			PixbufCache_.prune();
-			ReferenceCache_.prune();
-			
-			watch.Stop();
-			
-			System.Console.WriteLine (string.Format ("Computed diff of {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, diffs.Count));
+	
+			PixbufCache_.prune ();
+			ReferenceCache_.prune ();
+	
+			watch.Stop ();
+	
+			System.Console.WriteLine (string.Format ("Computed diff of '{2}' with {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, diffs.Count, folder));
 
-			this.DiffList = diffs;
+			this.Diff = new DiffResult (diffs, folder);
 
 			if (DiffListChanged != null)
-				DiffListChanged(this);
+				DiffListChanged (this);
+		}
+
+		static string trim(string path) {
+			System.IO.DirectoryInfo di = new System.IO.DirectoryInfo(path);
+			return di.Parent.FullName + System.IO.Path.DirectorySeparatorChar + di.Name;
+		}
+		
+		public static void test() {
+			string t = trim("/greg//ggregoijh/eee");
+			if (t != "/greg/ggregoijh/eee")
+				throw new InvalidProgramException();
 		}
 	}
 }

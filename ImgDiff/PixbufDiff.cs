@@ -41,12 +41,16 @@ namespace ImgDiff
 				this.Diff = null;
 				this.R2 = 1;
 				this.diffstring = "";
+			} else if (B == null) {
+				this.Diff = null;
+				this.R2 = 0;
+				this.diffstring = "";
 			} else {
 				string diffstring_;
 				double R2_;
 				this.Diff = PixbufDiff.getDiff (A, B, out diffstring_, out R2_);
-				this.diffstring = diffstring_;
 				this.R2 = R2_;
+				this.diffstring = diffstring_;
 			}
 		}
 

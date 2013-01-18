@@ -13,6 +13,8 @@ namespace ImgDiff
 	{
 		double R2_threshold;
 		DiffComputer DiffComputer_;
+		StatusIcon StatusIcon_;
+		Menu trayPopupMenu;
 
 		public static Gdk.Pixbuf ErrorPixbuf;
 
@@ -20,6 +22,9 @@ namespace ImgDiff
 				base(WindowType.Toplevel)
 		{
 			this.Build ();
+
+			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
+
 			imgdiff.ErrorPixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", Gtk.IconSize.LargeToolbar);
 
 			MySettings settings = MySettings.load();
@@ -30,15 +35,23 @@ namespace ImgDiff
 				});
 			};
 
-			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
+			trayPopupMenu = new Menu ();
+			StatusIcon_ = StatusIcon.NewFromStock(Stock.DialogWarning);//new StatusIcon(this.Icon);
+			StatusIcon_.Visible = false;
+			// Show/Hide the window (even from the Panel/Taskbar) when the TrayIcon has been clicked.
+			// StatusIcon_.Activate += delegate { this.Visible = !this.Visible; };
+			// Show a pop up menu when the icon has been right clicked.
+			StatusIcon_.PopupMenu += OnTrayIconPopup;			
 
 			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
-			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
-			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
+			this.entryWatchedFolder.Changed += delegate { HandleNewWatchedFolder(); };
+			this.filechooserbutton2.CurrentFolderChanged += delegate {
+				DirectoryInfo d1 = new DirectoryInfo(this.entryWatchedFolder.Text);
+				DirectoryInfo d2 = new DirectoryInfo(this.filechooserbutton2.CurrentFolder);
 				if ( string.IsNullOrWhiteSpace(this.entryWatchedFolder.Text)
-				    || new DirectoryInfo(this.entryWatchedFolder.Text).FullName != new DirectoryInfo(this.filechooserbutton2.CurrentFolder).FullName)
+				    || d1.Name != d2.Name || (d1.Parent == null ? "" : d1.Parent.FullName) != (d2.Parent == null ? "" : d2.Parent.FullName))
 				{
 					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
 				}
@@ -47,7 +60,62 @@ namespace ImgDiff
 			this.entryWatchedFolder.Text = settings.Path;
 		}
 
+		// Create the popup menu, on right click.
+		void OnTrayIconPopup (object o, EventArgs args)
+		{
+			foreach(Widget w in trayPopupMenu.AllChildren) trayPopupMenu.Remove(w);
 
+			DiffComputer.DiffResult result = DiffComputer_.Diff;
+
+			int width = 32; // IconSize.Menu
+			int height = 32;
+			float aspectTarget = width / (float)height;
+			foreach (PixbufDiff diff in result.List) {
+				string name = System.IO.Path.GetFileName(diff.Path);
+				ImageMenuItem menuItem = new ImageMenuItem (name + " R2=" + diff.R2.ToString("F4"));
+				float aspectSource = diff.A.Width / (float)diff.A.Height;
+/*				if (aspectSource < aspectTarget)
+					menuItem.Image = new Image(diff.A.ScaleSimple((int)(height*aspectSource), height, Gdk.InterpType.Nearest));
+				else
+					menuItem.Image = new Image(diff.A.ScaleSimple(width, (int)(width/aspectSource), Gdk.InterpType.Nearest));*/
+				trayPopupMenu.Add(menuItem);
+
+				// Activate the application when anything is clicked.
+				menuItem.Activated += delegate {
+					this.scrollTo(name); 
+				};
+			}
+			trayPopupMenu.ShowAll();
+			trayPopupMenu.Popup();
+			trayPopupMenu.Activate();
+		}
+
+		void scrollTo (string name)
+		{
+			if (scrolledwindow1.Child == null)
+				return;
+
+			Bin c = (scrolledwindow1.Child as Bin);
+			VBox vbox = c.Child as VBox;
+			if (vbox == null || vbox.Children.Length < 1)
+				return;
+
+			Table table = vbox.Children [0] as Table;
+			if (table == null)
+				return;
+
+			foreach (Widget child in table.AllChildren) {
+				Label label = child as Label;
+				if (label == null )
+					continue;
+
+				if (label.Text == name)
+				{
+					scrolledwindow1.Vadjustment.Value = label.Allocation.Top;
+					return;
+				}
+			}
+		}
 
 		void HandleUnhandledException (GLib.UnhandledExceptionArgs args)
 		{
@@ -74,12 +142,10 @@ namespace ImgDiff
 			if (DiffComputer_.Path == folder)
 				return;
 
-			DiffComputer_.Path = folder;
-
 			if (Directory.Exists (folder))
 				this.filechooserbutton2.SetCurrentFolder (folder);
 
-			Update();
+			DiffComputer_.Path = folder;
 		}
 
 
@@ -87,9 +153,10 @@ namespace ImgDiff
 		{
 			updateSettings ();
 
-			string folder = this.entryWatchedFolder.Text;
+			DiffComputer.DiffResult result = DiffComputer_.Diff;
+			string folder = result.Path;
 
-			List<PixbufDiff> diff = DiffComputer_.DiffList;
+			List<PixbufDiff> diff = result.List;
 			List<PixbufDiff> oklist = new List<PixbufDiff>(diff);
 			oklist.RemoveAll (x => x.R2 < this.R2_threshold);
 			diff.RemoveAll (x => x.R2 >= this.R2_threshold);
@@ -129,8 +196,10 @@ namespace ImgDiff
 				} else
 					statusbartext ("Found no image files in folder " + folder + ".");
 			} else {
-				int j = diff.Count;
-				statusbartext (string.Format ("{0} image{2} {1} not match reference image{2}", j, j == 1 ? "does" : "do", j == 1 ? "" : "s"));
+				if (diff.Count == 1)
+					statusbartext (string.Format ("\"{0}\" does not match its reference image", System.IO.Path.GetFileName(diff[0].Path)));
+				else
+					statusbartext (string.Format ("{0} of {1} images do not match their reference images", diff.Count, diff.Count + oklist.Count));
 			}
 
 			if (scrolledwindow1.Child != null) {
@@ -157,6 +226,13 @@ namespace ImgDiff
 				vbox.Add (sumtable);
 			}
 			vbox.ShowAll();
+
+			StatusIcon_.Visible = diff.Count > 0;
+			if (diff.Count == 1)
+				StatusIcon_.Tooltip = string.Format ("\"{0}\" does not match its reference image. R2={1}", System.IO.Path.GetFileName(diff[0].Path), diff[0].R2.ToString("F4"));
+			else
+				StatusIcon_.Tooltip = string.Format ("{0} of {1} images do not match their reference images:\n", diff.Count, diff.Count + oklist.Count,
+				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2=" + x.R2.ToString() )));
 		}
 
 		AspectFrame createAspectFrame(Gdk.Pixbuf pixbuf)
@@ -216,27 +292,25 @@ namespace ImgDiff
 		{
 			Gdk.Pixbuf pixbuf = null;
 			try {
-				ReferenceStore.validateImage(path);
-				pixbuf = ReferenceStore.getReferenceImage(path);
+				ReferenceStore.validateImage (path);
+				DiffComputer_.LaunchRecompute();
 			} catch (Exception x) {
-				statusbartext( x.Message );
-				System.Console.WriteLine ( x.Message );
+				statusbartext (x.Message);
+				System.Console.WriteLine (x.Message);
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
-				pixbuf.Data["tooltip"] = x.Message;
+				pixbuf.Data ["tooltip"] = x.Message;
+
+				if (reference.Child != null)
+					reference.Remove (reference.Child);
+
+				reference.Child = PixbufCache.createImage (pixbuf);
+				updateAspect (reference);
+
+				if (pixbuf.Data.ContainsKey ("tooltip"))
+					reference.Child.TooltipText = pixbuf.Data ["tooltip"] as string;
+
+				reference.ShowAll ();
 			}
-
-			if (reference.Child != null)
-				reference.Remove(reference.Child);
-
-			reference.Child = PixbufCache.createImage ( pixbuf );
-			updateAspect(reference);
-
-			if (pixbuf.Data.ContainsKey("tooltip"))
-				reference.Child.TooltipText = pixbuf.Data["tooltip"] as string;
-
-			reference.ShowAll ();
-
-			Update();
 		}
 
 
