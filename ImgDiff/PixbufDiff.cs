@@ -3,9 +3,55 @@ using Gdk;
 
 namespace ImgDiff
 {
-	public class ImageCompare
+	public class PixbufDiff
 	{
-		public static Pixbuf getDiff (Pixbuf A, Pixbuf B, out string diffstring, out double r2)
+		public string Path {
+			get;
+			private set;
+		}
+		public Pixbuf A {
+			get;
+			private set;
+		}
+		public Pixbuf B {
+			get;
+			private set;
+		}
+		public Pixbuf Diff {
+			get;
+			private set;
+		}
+		public double R2 {
+			get;
+			private set;
+		}
+		public string diffstring {
+			get;
+			private set;
+		}
+
+
+		public PixbufDiff (Pixbuf A, Pixbuf B, string path)
+		{
+			this.Path = path;
+			this.A = A;
+			this.B = B;
+
+			if (A == null) {
+				this.Diff = null;
+				this.R2 = 1;
+				this.diffstring = "";
+			} else {
+				string diffstring_;
+				double R2_;
+				this.Diff = PixbufDiff.getDiff (A, B, out diffstring_, out R2_);
+				this.diffstring = diffstring_;
+				this.R2 = R2_;
+			}
+		}
+
+
+		static Pixbuf getDiff (Pixbuf A, Pixbuf B, out string diffstring, out double r2)
 		{
 			// r2 as in http://en.wikipedia.org/wiki/Coefficient_of_determination
 			

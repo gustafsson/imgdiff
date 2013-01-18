@@ -7,10 +7,8 @@ namespace ImgDiff
 {
 	public class ReferenceStore
 	{
-		public static Gdk.Pixbuf validateImage( string path )
+		public static void validateImage( string path )
 		{
-			Gdk.Pixbuf pixbuf = null;
-
 			string isopath = ReferenceStore.isopath (path);
 			
 			using (IsolatedStorageFile isoStore = ReferenceStore.isoStore()) {
@@ -20,13 +18,7 @@ namespace ImgDiff
 						CopyStream (input, output);
 					}
 				}
-				
-				using (IsolatedStorageFileStream input = isoStore.OpenFile (isopath, FileMode.Open)) {
-					pixbuf = new Gdk.Pixbuf (input);
-				}
 			}
-
-			return pixbuf;
 		}
 
 		public static Gdk.Pixbuf getReferenceImage (string path)
@@ -64,7 +56,7 @@ namespace ImgDiff
 								break;
 							//if (!Array.Equals(buffer1, buffer2))
 							//    return false;
-							if (!ImageCompare.UnsafeCompare(buffer1, buffer2))
+							if (!PixbufDiff.UnsafeCompare(buffer1, buffer2))
 								return false;
 						}
 					}
@@ -79,7 +71,7 @@ namespace ImgDiff
 			return IsolatedStorageFile.GetUserStoreForAssembly();
 		}
 
-		static public string isopath(string path)
+		static string isopath(string path)
 		{
 			/*
 			string isopath = path;
