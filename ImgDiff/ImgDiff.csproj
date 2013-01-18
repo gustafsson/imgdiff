@@ -63,6 +63,7 @@
     <Compile Include="FixedFileWatcher.cs" />
     <Compile Include="MySettings.cs" />
     <Compile Include="ImageCache.cs" />
+    <Compile Include="ReferenceStore.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using Gtk;
 using System.Collections.Generic;
-using System.IO.IsolatedStorage;
 using System.Diagnostics;
 using System.Timers;
 
@@ -108,7 +107,7 @@ namespace ImgDiff
 			List<double> R2_Values = new List<double> ();
 			for (int i=0; i<files.Length; ++i) {
 				try {
-					if (equalfiles (files [i]))
+					if (ReferenceStore.equalfiles (files [i]))
 					{
 						imagefiles.Add (files [i]);
 						R2_Values.Add (1);
@@ -256,28 +255,21 @@ namespace ImgDiff
 
 		AspectFrame getReferenceImage (string path)
 		{
-			string isopath = this.isopath (path);
+			string isopath = ReferenceStore.isopath (path);
 
 			AspectFrame image = ImageCache_.fromCache(isopath);
 			if (image != null)
 				return image;
 
-			Gdk.Pixbuf pixbuf = null;
 			string tooltip="";
 
+			Gdk.Pixbuf pixbuf = null;
 			try {
-				using (IsolatedStorageFile isoStore = this.isoStore()) {
-					if (isoStore.FileExists (isopath))
-					{
-						using (IsolatedStorageFileStream isf = isoStore.OpenFile (isopath, FileMode.Open)) {
-							pixbuf = new Gdk.Pixbuf (isf);
-						}
-					}
-				}
+				pixbuf = ReferenceStore.getReferenceImage(path);
 			} catch (Exception x) {
 				tooltip = x.Message;
 				System.Console.WriteLine (x.Message);
-				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
+				pixbuf = Stetic.IconLoader.LoadIcon ( this, "gtk-dialog-error", IconSize.LargeToolbar);
 			}
 
 			image = createWidget( pixbuf, isopath );
@@ -294,7 +286,7 @@ namespace ImgDiff
 		}
 
 
-		void createImage (AspectFrame af, Gdk.Pixbuf pixbuf, string path)
+		Image createImage (AspectFrame af, Gdk.Pixbuf pixbuf, string path)
 		{
 			if (pixbuf!=null)
 				System.Console.WriteLine (string.Format("Creating {0}image of {1}",
@@ -322,86 +314,41 @@ namespace ImgDiff
 
 					if (im.Pixbuf.Width != args.Allocation.Width || im.Pixbuf.Height != args.Allocation.Height)
 					{
-//						string p = im.Data["path"] as string;
-//						System.Console.WriteLine (string.Format("Resizing {0} to {1}x{2} from origin {3}x{4}",
-//						                                        System.IO.Path.GetFileName(p),
-//						                                        args.Allocation.Width, args.Allocation.Height,
-//						                                        pb.Width, pb.Height));
 						im.Pixbuf = pb.ScaleSimple(args.Allocation.Width, args.Allocation.Height, Gdk.InterpType.Nearest);
 					}
 				};
 			}
+
+			return img;
 		}
 
 
 		void validateImage (AspectFrame testWidget, AspectFrame reference)
 		{
 			Gdk.Pixbuf pixbuf = null;
-
-			Widget w = testWidget.Child;
-			string path = w.Data ["path"] as string;
-			string isopath = this.isopath (path);
-
 			try {
-				using (IsolatedStorageFile isoStore = this.isoStore()) {
-					// copy file int o isolated storage
-					using (IsolatedStorageFileStream output = isoStore.OpenFile(isopath, FileMode.Create)) {
-						using (FileStream input = new FileStream(path, FileMode.Open)) {
-							CopyStream (input, output);
-						}
-					}
+				string path = testWidget.Child.Data ["path"] as string;
 
-					using (IsolatedStorageFileStream input = isoStore.OpenFile (isopath, FileMode.Open)) {
-						pixbuf = new Gdk.Pixbuf (input);
-					}
-				}
+				pixbuf = ReferenceStore.validateImage(path);
 			} catch (Exception x) {
-				System.Console.WriteLine (x.Message);
+				statusbartext( x.Message );
+				System.Console.WriteLine ( x.Message );
 				pixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
-				//reference.TooltipText = x.Message;
+				pixbuf.Data["tooltip"] = x.Message;
 			}
 
-
-			createImage (
+			Image img = createImage (
 				reference,
-				pixbuf,
-			    isopath);
+				pixbuf, "");
 
+			if (pixbuf.Data.ContainsKey("tooltip"))
+				img.TooltipText = pixbuf.Data["tooltip"] as string;
 
 			reference.ShowAll ();
 
 			Update();
 		}
 
-		string isopath(string path)
-		{
-			/*
-			string isopath = path;
-			isopath = isopath.Replace(System.IO.Path.AltDirectorySeparatorChar, '_');
-			isopath = isopath.Replace(System.IO.Path.DirectorySeparatorChar, '_');
-			isopath = isopath.Replace(System.IO.Path.PathSeparator, '_');
-			isopath = isopath.Replace(System.IO.Path.VolumeSeparatorChar, '_');
-			isopath = isopath + path.GetHashCode().ToString();
-			*/
-			return System.IO.Path.GetFileNameWithoutExtension ( path ) 
-				+ path.GetHashCode().ToString() 
-					+ System.IO.Path.GetExtension (path);
-		}
-
-		IsolatedStorageFile isoStore ()
-		{
-			return IsolatedStorageFile.GetUserStoreForAssembly();
-		}
-
-		public static void CopyStream(Stream input, Stream output)
-		{
-			byte[] buffer = new byte[32768];
-			int read;
-			while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-			{
-				output.Write (buffer, 0, read);
-			}
-		}
 
 		protected void OnAboutActionActivated (object sender, EventArgs e)
 		{
@@ -446,39 +393,6 @@ namespace ImgDiff
 			var contextId = this.statusbar.GetContextId("clicked");
 			this.statusbar.Push(contextId, text );
 		}
-
-		bool equalfiles (string path)
-		{
-			using (IsolatedStorageFile isoStore = this.isoStore()) {
-				string isopath = this.isopath (path);
-				if (!isoStore.FileExists (isopath))
-					return false;
-
-				using (IsolatedStorageFileStream input1 = isoStore.OpenFile(isopath, FileMode.Open)) {
-					using (FileStream input2 = new FileStream(path, FileMode.Open)) {
-						byte[] buffer1 = new byte[32768];
-						byte[] buffer2 = new byte[32768];
-						int read1, read2;
-						while (true) {
-							read1 = input1.Read (buffer1, 0, buffer1.Length);
-							read2 = input2.Read (buffer2, 0, buffer2.Length);
-							if (read1 != read2)
-								return false;
-							if (read1 <= 0)
-								break;
-							//if (!Array.Equals(buffer1, buffer2))
-							//    return false;
-							if (!ImageCompare.UnsafeCompare(buffer1, buffer2))
-								return false;
-						}
-					}
-				}
-			}
-
-			return true;
-		}
-
-
 
 		protected void OnEntryR2Changed (object sender, EventArgs e)
 		{
