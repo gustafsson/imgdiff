@@ -243,9 +243,22 @@ namespace ImgDiff
 		}
 
 
+		AspectFrame fromCache (string path)
+		{
+			Image img = ImageCache_.fromCache (path);
+			if (img != null) {
+				AspectFrame af = new AspectFrame (null, 0.5f, 0.5f, 1, false);
+				img.Reparent (af);
+				updateAspect (af);
+				return af;
+			}
+			return null;
+		}
+
+
 		AspectFrame getImage (string path)
 		{
-			AspectFrame image = ImageCache_.fromCache(path);
+			AspectFrame image = fromCache(path);
 			if (image != null)
 				return image;
 
@@ -257,7 +270,7 @@ namespace ImgDiff
 		{
 			string isopath = ReferenceStore.isopath (path);
 
-			AspectFrame image = ImageCache_.fromCache(isopath);
+			AspectFrame image = fromCache(isopath);
 			if (image != null)
 				return image;
 
@@ -281,45 +294,18 @@ namespace ImgDiff
 		AspectFrame createWidget(Gdk.Pixbuf pixbuf, string path)
 		{
 			AspectFrame af = new AspectFrame(null, 0.5f, 0.5f, 1, false);
-			createImage(af, pixbuf, path);
+			af.Child = ImageCache_.createImage(pixbuf, path);
+			updateAspect(af);
 			return af;
 		}
 
 
-		Image createImage (AspectFrame af, Gdk.Pixbuf pixbuf, string path)
+		void updateAspect (AspectFrame af)
 		{
-			if (pixbuf!=null)
-				System.Console.WriteLine (string.Format("Creating {0}image of {1}",
-			                                        pixbuf==null?"empty ":"", 
-			                                        System.IO.Path.GetFileName(path)));
-
-			Image img = new Image ();
-			img.Name = null;
-			img.Pixbuf = pixbuf;
-			img.Data["pixbuf"] = pixbuf;
-			img.Data["path"] = path;
-			img.SetSizeRequest( 0, 0 );
-			if (af.Child != null)
-				af.Remove(af.Child);
-			af.Child = img;
-
-			if (pixbuf != null)
-			{
-				af.Set( 0.5f, 0.5f, pixbuf.Width/(float)pixbuf.Height, false );
-
-				img.SizeAllocated += (o, args) =>
-				{
-					Image im = (o as Image);
-					Gdk.Pixbuf pb = (im.Data["pixbuf"] as Gdk.Pixbuf);
-
-					if (im.Pixbuf.Width != args.Allocation.Width || im.Pixbuf.Height != args.Allocation.Height)
-					{
-						im.Pixbuf = pb.ScaleSimple(args.Allocation.Width, args.Allocation.Height, Gdk.InterpType.Nearest);
-					}
-				};
+			Image img = af.Child as Image;
+			if (img != null && img.Pixbuf != null) {
+				af.Set( 0.5f, 0.5f, img.Pixbuf.Width/(float)img.Pixbuf.Height, false );
 			}
-
-			return img;
 		}
 
 
@@ -337,12 +323,14 @@ namespace ImgDiff
 				pixbuf.Data["tooltip"] = x.Message;
 			}
 
-			Image img = createImage (
-				reference,
+			if (reference.Child != null)
+				reference.Remove(reference.Child);
+
+			reference.Child = ImageCache_.createImage (
 				pixbuf, "");
 
 			if (pixbuf.Data.ContainsKey("tooltip"))
-				img.TooltipText = pixbuf.Data["tooltip"] as string;
+				reference.Child.TooltipText = pixbuf.Data["tooltip"] as string;
 
 			reference.ShowAll ();
 

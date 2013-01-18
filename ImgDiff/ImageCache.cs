@@ -45,21 +45,48 @@ namespace ImgDiff
 			im.Data.Remove("to prune");
 		}
 
-		public AspectFrame fromCache(string path)
+		public Image fromCache(string path)
 		{
 			if (images_.ContainsKey (path)) {
-				AspectFrame af = new AspectFrame(null, 0.5f, 0.5f, 1, false);
 				Image image = images_ [path];
 				image.Data.Remove("to prune");
 				Gdk.Pixbuf pixbuf = image.Data["pixbuf"] as Gdk.Pixbuf;
-				if (pixbuf != null)
-					af.Set( 0.5f, 0.5f, pixbuf.Width/(float)pixbuf.Height, false );
-				
-				image.Reparent(af);
-				
-				return af;
+
+				return image;
 			}
 			return null;
+		}
+
+		// Need an AspectFrame to set aspect ratio.
+		public Image createImage (Gdk.Pixbuf pixbuf, string path)
+		{
+			if (pixbuf!=null)
+				System.Console.WriteLine (string.Format("Creating {0}image of {1}",
+				                                        pixbuf==null?"empty ":"", 
+				                                        System.IO.Path.GetFileName(path)));
+			
+			Image img = new Image ();
+			img.Name = null;
+			img.Pixbuf = pixbuf;
+			img.Data["pixbuf"] = pixbuf;
+			img.Data["path"] = path;
+			img.SetSizeRequest( 0, 0 );
+
+			if (pixbuf != null)
+			{
+				img.SizeAllocated += (o, args) =>
+				{
+					Image im = (o as Image);
+					Gdk.Pixbuf pb = (im.Data["pixbuf"] as Gdk.Pixbuf);
+					
+					if (im.Pixbuf.Width != args.Allocation.Width || im.Pixbuf.Height != args.Allocation.Height)
+					{
+						im.Pixbuf = pb.ScaleSimple(args.Allocation.Width, args.Allocation.Height, Gdk.InterpType.Nearest);
+					}
+				};
+			}
+			
+			return img;
 		}
 	}
 }
