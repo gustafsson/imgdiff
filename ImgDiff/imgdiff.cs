@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using Gtk;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Timers;
 
 /**
@@ -13,38 +12,33 @@ namespace ImgDiff
 	public partial class imgdiff : Window
 	{
 		double R2_threshold;
+		DiffComputer DiffComputer_;
 
-		FixedFileWatcher FixedFileWatcher_;
-		PixbufCache PixbufCache_;
-		PixbufCache ReferenceCache_;
+		public static Gdk.Pixbuf ErrorPixbuf;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
 		{
 			this.Build ();
+			imgdiff.ErrorPixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", Gtk.IconSize.LargeToolbar);
 
 			MySettings settings = MySettings.load();
+			DiffComputer_ = new DiffComputer();
+			DiffComputer_.DiffListChanged += (DiffComputer sender) => {
+				Gtk.Application.Invoke( delegate {
+					Update();
+				});
+			};
 
 			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
 
 			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
 
-			PixbufCache_ = new PixbufCache();
-			ReferenceCache_ = new PixbufCache();
-
-			FixedFileWatcher_ = new FixedFileWatcher();
-			FixedFileWatcher_.Changed += (object sender, string[] files) => {
-				Gtk.Application.Invoke( delegate {
-					PixbufCache_.prune(files);
-					Update();
-				});
-			};
-
 			this.entryWatchedFolder.Changed += (sender, e) => HandleNewWatchedFolder();
 			this.filechooserbutton2.CurrentFolderChanged += (object sender, EventArgs e) => {
 				if ( string.IsNullOrWhiteSpace(this.entryWatchedFolder.Text)
-				    || new DirectoryInfo(this.entryWatchedFolder.Text).FullName != this.filechooserbutton2.CurrentFolder)
+				    || new DirectoryInfo(this.entryWatchedFolder.Text).FullName != new DirectoryInfo(this.filechooserbutton2.CurrentFolder).FullName)
 				{
 					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
 				}
@@ -77,10 +71,10 @@ namespace ImgDiff
 		void HandleNewWatchedFolder ()
 		{
 			string folder = this.entryWatchedFolder.Text;
-			if (FixedFileWatcher_.Path == folder)
+			if (DiffComputer_.Path == folder)
 				return;
 
-			FixedFileWatcher_.Path = folder;
+			DiffComputer_.Path = folder;
 
 			if (Directory.Exists (folder))
 				this.filechooserbutton2.SetCurrentFolder (folder);
@@ -89,88 +83,13 @@ namespace ImgDiff
 		}
 
 
-		List<PixbufDiff> getDiff(string folder)
-		{
-			Stopwatch watch = new Stopwatch ();
-			watch.Start ();
-
-			string[] files;
-			if (Directory.Exists (folder))
-				files = Directory.GetFiles (folder);
-			else
-				files = new string[0];
-
-			PixbufCache_.flagToPrune ();
-			ReferenceCache_.flagToPrune ();
-			List<PixbufDiff> diffs = new List<PixbufDiff> ();
-			for (int i=0; i<files.Length; ++i) {
-				string path = files[i];
-				PixbufDiff diff;
-				if (ReferenceStore.equalfiles (files [i]))
-				{
-					diff = new PixbufDiff(null, null, files[i]);
-				}
-				else
-				{
-					Gdk.Pixbuf A = PixbufCache_.fromCache (path);
-					if (A == null) {
-						try
-						{
-							A = new Gdk.Pixbuf (path);
-							PixbufCache_.updateCache (path, A);
-						} catch (GLib.GException x) {
-							if (x.Source == "gdk-sharp") {
-								// Not an image file
-							} else {
-								System.Console.WriteLine (x.Message);
-							}
-							continue;
-						} catch (Exception x) {
-							if (x.Source == "gdk-sharp") {
-								// Not an image file
-							} else {
-								System.Console.WriteLine (x.Message);
-							}
-							continue;
-						}
-					}
-
-					Gdk.Pixbuf B = ReferenceCache_.fromCache (path);
-					if (B == null) {
-						try
-						{
-							B = ReferenceStore.getReferenceImage (path);
-							ReferenceCache_.updateCache (path, B);
-						} catch (Exception x) {
-							B = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", IconSize.LargeToolbar);
-							B.Data["tooltip"] = x.Message;
-						}
-					}
-
-					// Compute a diff
-					diff = new PixbufDiff(A, B, path);
-				}
-
-				diffs.Add(diff);
-			}
-
-			PixbufCache_.prune();
-			ReferenceCache_.prune();
-
-			watch.Stop();
-
-			System.Console.WriteLine (string.Format ("Computed diff of {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, diffs.Count));
-
-			return diffs;
-		}
-
 		void Update ()
 		{
 			updateSettings ();
 
 			string folder = this.entryWatchedFolder.Text;
 
-			List<PixbufDiff> diff = getDiff (folder);
+			List<PixbufDiff> diff = DiffComputer_.DiffList;
 			List<PixbufDiff> oklist = new List<PixbufDiff>(diff);
 			oklist.RemoveAll (x => x.R2 < this.R2_threshold);
 			diff.RemoveAll (x => x.R2 >= this.R2_threshold);
@@ -184,7 +103,7 @@ namespace ImgDiff
 				Label nametext = new Label (System.IO.Path.GetFileName (diff [i].Path));
 				Label nametext2 = new Label (System.IO.Path.GetFileName (diff [i].Path));
 
-				uint j = 2 * (uint)i;
+				uint j = 2 * (uint)i + 2;
 				table.Attach (nametext, 0u, 3u, j - 2, j - 1);
 				table.Attach (nametext2, 4u, 7u, j - 2, j - 1);
 				table.Attach (af, 0u, 3u, j - 1, j);
@@ -211,7 +130,7 @@ namespace ImgDiff
 					statusbartext ("Found no image files in folder " + folder + ".");
 			} else {
 				int j = diff.Count;
-				statusbartext (string.Format ("{0} image{1} not match reference image{1}", j, j == 1 ? " does" : "s do"));
+				statusbartext (string.Format ("{0} image{2} {1} not match reference image{2}", j, j == 1 ? "does" : "do", j == 1 ? "" : "s"));
 			}
 
 			if (scrolledwindow1.Child != null) {
@@ -341,14 +260,7 @@ namespace ImgDiff
 
 		protected void OnEntryR2Changed (object sender, EventArgs e)
 		{
-			double R2 = R2_threshold;
-			double.TryParse (this.entryR2.Text, out R2);
-			R2 = Math.Max (0.01, Math.Min (1, R2));
-			if (R2 != R2_threshold) {
-				R2_threshold = R2;
-				Update ();
-			}
-			this.entryR2.Text = R2.ToString("G");
+			UpdateR2();
 		}
 
 		void updateSettings() {
@@ -356,6 +268,34 @@ namespace ImgDiff
 			settings.R2_Threshold = this.R2_threshold;
 			settings.Path = this.entryWatchedFolder.Text;
 			settings.save();
+		}
+
+		protected void OnEntryR2FocusOutEvent (object o, FocusOutEventArgs args)
+		{
+			ValidateR2();
+		}
+
+		protected void OnEntryR2KeyReleaseEvent (object o, KeyReleaseEventArgs args)
+		{
+			if (args.Event.Key == Gdk.Key.Return)
+				ValidateR2();
+		}
+
+		void UpdateR2 () {
+			double R2 = R2_threshold;
+			if (!double.TryParse (this.entryR2.Text, out R2))
+				return;
+			R2 = Math.Max (0.01, Math.Min (1, R2));
+			if (R2 != R2_threshold) {
+				R2_threshold = R2;
+				Update ();
+			}
+		}
+
+		void ValidateR2 ()
+		{
+			UpdateR2();
+			this.entryR2.Text = R2_threshold.ToString("G");
 		}
 	}
 }

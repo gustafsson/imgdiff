@@ -41,7 +41,7 @@
         <child>
           <widget class="Gtk.MenuBar" id="menubar2">
             <property name="MemberName" />
-            <node name="__gtksharp_99_Stetic_Editor_ActionMenuBar" type="Menubar">
+            <node name="menubar2" type="Menubar">
               <node type="Menu" action="HelpAction">
                 <node type="Menuitem" action="AboutAction" />
                 <node type="Menuitem" action="QuitAction" />
@@ -149,6 +149,8 @@
                 <property name="MaxLength">8</property>
                 <property name="InvisibleChar">●</property>
                 <signal name="Changed" handler="OnEntryR2Changed" />
+                <signal name="FocusOutEvent" handler="OnEntryR2FocusOutEvent" />
+                <signal name="KeyReleaseEvent" handler="OnEntryR2KeyReleaseEvent" />
               </widget>
               <packing>
                 <property name="Position">3</property>

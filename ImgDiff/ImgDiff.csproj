@@ -64,6 +64,7 @@
     <Compile Include="ReferenceStore.cs" />
     <Compile Include="PixbufCache.cs" />
     <Compile Include="PixbufDiff.cs" />
+    <Compile Include="DiffComputer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

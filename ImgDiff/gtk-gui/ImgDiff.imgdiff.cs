@@ -148,6 +148,8 @@ namespace ImgDiff
 			this.AboutAction.Activated += new global::System.EventHandler (this.OnAboutActionActivated);
 			this.QuitAction.Activated += new global::System.EventHandler (this.OnQuitActionActivated);
 			this.entryR2.Changed += new global::System.EventHandler (this.OnEntryR2Changed);
+			this.entryR2.FocusOutEvent += new global::Gtk.FocusOutEventHandler (this.OnEntryR2FocusOutEvent);
+			this.entryR2.KeyReleaseEvent += new global::Gtk.KeyReleaseEventHandler (this.OnEntryR2KeyReleaseEvent);
 		}
 	}
 }
