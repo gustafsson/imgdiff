@@ -17,16 +17,12 @@ namespace ImgDiff
 		System.Windows.Forms.NotifyIcon NotifyIcon_;
 		//Menu trayPopupMenu;
 
-		public static Gdk.Pixbuf ErrorPixbuf;
-
 		public imgdiff () : 
 				base(WindowType.Toplevel)
 		{
 			this.Build ();
 
 			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
-
-			imgdiff.ErrorPixbuf = Stetic.IconLoader.LoadIcon (this, "gtk-dialog-error", Gtk.IconSize.LargeToolbar);
 
 			MySettings settings = MySettings.load();
 			DiffComputer_ = new DiffComputer();

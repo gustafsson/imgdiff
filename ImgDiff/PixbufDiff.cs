@@ -68,9 +68,9 @@ namespace ImgDiff
 			}
 			if (A.HasAlpha != B.HasAlpha) {
 				if (A.HasAlpha && !B.HasAlpha)
-					diffstring += string.Format ("Reference image doesn't have an alpha channel. But new the image does.\n");
+					diffstring += string.Format ("Reference image doesn't have an alpha channel. But the new image does.\n");
 				else
-					diffstring += string.Format ("Reference image has an alpha channel. But new the image doesn't.\n");
+					diffstring += string.Format ("Reference image has an alpha channel. But the new image doesn't.\n");
 			} else {
 				if (A.Rowstride != B.Rowstride) {
 					diffstring += string.Format ("Different rowstride.\n");

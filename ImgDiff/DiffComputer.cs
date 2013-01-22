@@ -140,7 +140,7 @@ namespace ImgDiff
 							if (B != null)
 								ReferenceCache_.updateCache (path, B);
 						} catch (Exception x) {
-							B = imgdiff.ErrorPixbuf;
+							B = Gtk.StatusIcon.NewFromStock(Gtk.Stock.DialogError).Pixbuf;
 							B.Data ["tooltip"] = x.Message;
 						}
 					}
