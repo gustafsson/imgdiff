@@ -134,7 +134,10 @@ namespace ImgDiff
 						}
 					}
 			
-					Pixbuf B = ReferenceCache_.fromCache (path);
+					Pixbuf B = null;
+					if (ReferenceStore.hasReferenceImage (path))
+						B = ReferenceCache_.fromCache (path);
+
 					if (B == null) {
 						try {
 							B = ReferenceStore.getReferenceImage (path);

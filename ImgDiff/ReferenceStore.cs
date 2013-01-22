@@ -35,6 +35,14 @@ namespace ImgDiff
 			return pixbuf;
 		}
 
+		public static bool hasReferenceImage (string path)
+		{
+			string isopath = ReferenceStore.isopath(path);
+			using (IsolatedStorageFile isoStore = ReferenceStore.isoStore()) {
+				return isoStore.FileExists (isopath);
+			}
+		}
+
 		public static bool equalfiles (string path)
 		{
 			using (IsolatedStorageFile isoStore = ReferenceStore.isoStore()) {
