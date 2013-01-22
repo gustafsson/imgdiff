@@ -62,13 +62,35 @@ namespace ImgDiff
 			diffstring = "";
 			r2 = 0;
 
-			if (A.Width != B.Width || A.Height != B.Height || A.Rowstride != B.Rowstride) {
-				B = B.ScaleSimple(A.Width, A.Height, Gdk.InterpType.Nearest);
-				diffstring = string.Format ("Different sizes!\n");
+			if (A.Width != B.Width || A.Height != B.Height) {
+				B = B.ScaleSimple (A.Width, A.Height, Gdk.InterpType.Nearest);
+				diffstring = string.Format ("Different sizes.\n");
 			}
-			
-			//Gdk.Image C = new Gdk.Image (Gdk.ImageType.Normal, Gdk.Visual.Best, A.Width, A.Height);
-			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone (); //new Gdk.Pixbuf(null, A.Width, A.Height );
+			if (A.HasAlpha != B.HasAlpha) {
+				if (A.HasAlpha && !B.HasAlpha)
+					diffstring += string.Format ("Reference image doesn't have an alpha channel. But new the image does.\n");
+				else
+					diffstring += string.Format ("Reference image has an alpha channel. But new the image doesn't.\n");
+			} else {
+				if (A.Rowstride != B.Rowstride) {
+					diffstring += string.Format ("Different rowstride.\n");
+				}
+			}
+			if (A.NChannels - (A.HasAlpha ? 1 : 0) != B.NChannels - (B.HasAlpha ? 1 : 0)) {
+				diffstring += string.Format ("Different number of channels.");
+				return null;
+			}
+
+			if (A.BitsPerSample != B.BitsPerSample) {
+				diffstring += string.Format ("Different bits per sample\n");
+				return null;
+			}
+
+			if (A.BitsPerSample != 8) {
+				diffstring += string.Format ("Only support diffs of images with 8 bits per sample, got {1}.", A.BitsPerSample);
+				return null;
+			}
+			Gdk.Pixbuf C = (Gdk.Pixbuf)A.Clone ();
 			double v = 0;
 			double amean = 0;
 			double cmean = 0;
@@ -77,33 +99,42 @@ namespace ImgDiff
 				byte* a = (byte*)A.Pixels;
 				byte* b = (byte*)B.Pixels;
 				byte* c = (byte*)C.Pixels;
+				int row = Math.Min(Math.Min(A.Rowstride, B.Rowstride), C.Rowstride);
 				for (int y=0; y<A.Height; ++y) {
-					for (int x=0; x<A.Rowstride; ++x) {
-						int o = y * A.Rowstride + x;
-						byte d = (byte)Math.Abs (((int)a [o]) - (int)b [o]);
-						amean += a [o];
-						c [o] = d;
-						cmean += d;
-						v += d * d;
+					int oa = y * A.Rowstride;
+					int ob = y * B.Rowstride;
+					int oc = y * C.Rowstride;
+					for (int n=0; n<A.Width; ++n)
+					{
+						for (int m=0; m<A.NChannels; ++m) {
+							int bv = 0;
+							if (m < B.NChannels)
+								bv = (int)b [ob++];
+							byte d = (byte)Math.Abs (((int)a [oa]) - bv);
+							amean += a [oa++];
+							c [oc++] = d;
+							cmean += d;
+							v += d * d;
+						}
 					}
 				}
-				amean /= (double)A.Height * A.Rowstride;
-				cmean /= (double)A.Height * A.Rowstride;
+				amean /= (double)A.Height * A.Width * A.NChannels;
+				cmean /= (double)C.Height * C.Width * C.NChannels;
 
 				double scale = Math.Max(1, 32.0/cmean);
 				// Compute R2 denominator sum from 'a', and normalize 'c'
 				for (int y=0; y<A.Height; ++y) {
-					for (int x=0; x<A.Rowstride; ++x) {
-						int o = y * A.Rowstride + x;
-						double d = a[o] - amean;
+					int oa = y * A.Rowstride;
+					int oc = y * C.Rowstride;
+					for (int x=0; x<row; ++x) {
+						double d = a[oa+x] - amean;
 						asum += d*d;
-						c[o] = (byte)Math.Min (255.0, c[o]*scale);
+						c[oc+x] = (byte)Math.Min (255.0, c[oc+x]*scale);
 					}
 				}
 			}
 			
 			r2 = 1 - v/asum;
-			// Not actual percent, more like a hint on how much they differ
 			diffstring += r2.ToString("G");
 
 			return C;
