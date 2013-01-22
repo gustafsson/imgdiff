@@ -13,9 +13,9 @@ namespace ImgDiff
 	{
 		double R2_threshold;
 		DiffComputer DiffComputer_;
-		//StatusIcon StatusIcon_;
+		StatusIcon StatusIcon_;
 		System.Windows.Forms.NotifyIcon NotifyIcon_;
-		//Menu trayPopupMenu;
+		Menu trayPopupMenu;
 
 		public imgdiff () : 
 				base(WindowType.Toplevel)
@@ -24,44 +24,42 @@ namespace ImgDiff
 
 			GLib.ExceptionManager.UnhandledException += HandleUnhandledException;
 
-			MySettings settings = MySettings.load();
-			DiffComputer_ = new DiffComputer();
+			MySettings settings = MySettings.load ();
+			DiffComputer_ = new DiffComputer ();
 			DiffComputer_.DiffListChanged += (DiffComputer sender) => {
-				Gtk.Application.Invoke( delegate {
-					Update();
-					if (NotifyIcon_.Visible)
-						NotifyIcon_.ShowBalloonTip(3);
+				Gtk.Application.Invoke (delegate {
+					Update ();
+					if (NotifyIcon_ != null && NotifyIcon_.Visible)
+						NotifyIcon_.ShowBalloonTip (3);
 				});
 			};
 
-			/*trayPopupMenu = new Menu ();
-			StatusIcon_ = StatusIcon.NewFromStock(Stock.DialogWarning);//new StatusIcon(this.Icon);
-			StatusIcon_.Visible = false;
-			// Show/Hide the window (even from the Panel/Taskbar) when the TrayIcon has been clicked.
-			// StatusIcon_.Activate += delegate { this.Visible = !this.Visible; };
-			// Show a pop up menu when the icon has been right clicked.
-			StatusIcon_.PopupMenu += OnTrayIconPopup;			
-			StatusIcon_.Activate += delegate {
-				this.Show();
-			};*/
-
-			NotifyIcon_ = new System.Windows.Forms.NotifyIcon();
-			NotifyIcon_.Visible = false;
-			NotifyIcon_.Icon = System.Drawing.SystemIcons.Warning;
-			NotifyIcon_.BalloonTipClicked += delegate {
-				if (!this.HasFocus)
-				{
-					this.Visible = false;
-					this.Visible = true;
-				}
-			};
-			NotifyIcon_.Click += delegate {
-				if (!this.HasFocus)
-				{
-					this.Visible = false;
-					this.Visible = true;
-				}
-			};
+			if (imgdiff.IsLinux) {
+				trayPopupMenu = new Menu ();
+				StatusIcon_ = StatusIcon.NewFromStock (Stock.DialogWarning);//new StatusIcon(this.Icon);
+				StatusIcon_.Visible = false;
+				// Show a pop up menu when the icon has been right clicked.
+				StatusIcon_.PopupMenu += OnTrayIconPopup;			
+				StatusIcon_.Activate += delegate {
+					this.Show ();
+				};
+			} else {
+				NotifyIcon_ = new System.Windows.Forms.NotifyIcon ();
+				NotifyIcon_.Visible = false;
+				NotifyIcon_.Icon = System.Drawing.SystemIcons.Warning;
+				NotifyIcon_.BalloonTipClicked += delegate {
+					if (!this.HasFocus) {
+						this.Visible = false;
+						this.Visible = true;
+					}
+				};
+				NotifyIcon_.Click += delegate {
+					if (!this.HasFocus) {
+						this.Visible = false;
+						this.Visible = true;
+					}
+				};
+			}
 
 			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
@@ -82,7 +80,7 @@ namespace ImgDiff
 			this.entryWatchedFolder.Text = settings.Path;
 		}
 
-/*		// Create the popup menu, on right click.
+		// Create the popup menu, on right click.
 		void OnTrayIconPopup (object o, EventArgs args)
 		{
 			foreach(Widget w in trayPopupMenu.AllChildren) trayPopupMenu.Remove(w);
@@ -91,17 +89,16 @@ namespace ImgDiff
 
 			int width = 32; // IconSize.Menu
 			int height = 32;
-			float aspectTarget = width / (float)height;
+			//float aspectTarget = width / (float)height;
 			foreach (PixbufDiff diff in result.List) {
 				string name = System.IO.Path.GetFileName(diff.Path);
 				ImageMenuItem menuItem = new ImageMenuItem (name + " R2=" + diff.R2.ToString("F4"));
-				float aspectSource = diff.A.Width / (float)diff.A.Height;
-				*/
-/*				if (aspectSource < aspectTarget)
-					menuItem.Image = new Image(diff.A.ScaleSimple((int)(height*aspectSource), height, Gdk.InterpType.Nearest));
-				else
-					menuItem.Image = new Image(diff.A.ScaleSimple(width, (int)(width/aspectSource), Gdk.InterpType.Nearest));*/
-/*				trayPopupMenu.Add(menuItem);
+				//float aspectSource = diff.A.Width / (float)diff.A.Height;
+				//if (aspectSource < aspectTarget)
+				//	menuItem.Image = new Image(diff.A.ScaleSimple((int)(height*aspectSource), height, Gdk.InterpType.Nearest));
+				//else
+				//	menuItem.Image = new Image(diff.A.ScaleSimple(width, (int)(width/aspectSource), Gdk.InterpType.Nearest));*/
+				trayPopupMenu.Add(menuItem);
 
 				// Activate the application when anything is clicked.
 				menuItem.Activated += delegate {
@@ -112,7 +109,7 @@ namespace ImgDiff
 			trayPopupMenu.Popup();
 			trayPopupMenu.Activate();
 		}
-*/
+
 		void scrollTo (string name)
 		{
 			if (scrolledwindow1.Child == null)
@@ -179,8 +176,8 @@ namespace ImgDiff
 			DiffComputer.DiffResult result = DiffComputer_.Diff;
 			string folder = result.Path;
 
-			List<PixbufDiff> diff = new List<PixbufDiff>(result.List);
-			List<PixbufDiff> oklist = new List<PixbufDiff>(result.List);
+			List<PixbufDiff> diff = new List<PixbufDiff> (result.List);
+			List<PixbufDiff> oklist = new List<PixbufDiff> (result.List);
 			oklist.RemoveAll (x => x.R2 < this.R2_threshold);
 			diff.RemoveAll (x => x.R2 >= this.R2_threshold);
 
@@ -221,7 +218,7 @@ namespace ImgDiff
 					statusbartext ("Found no image files in folder " + folder + "");
 			} else {
 				if (diff.Count == 1)
-					statusbartext (string.Format ("\"{0}\" does not match its reference image", System.IO.Path.GetFileName(diff[0].Path)));
+					statusbartext (string.Format ("\"{0}\" does not match its reference image", System.IO.Path.GetFileName (diff [0].Path)));
 				else
 					statusbartext (string.Format ("{0} of {1} images do not match their reference images", diff.Count, diff.Count + oklist.Count));
 			}
@@ -240,29 +237,33 @@ namespace ImgDiff
 			bc.Expand = false;
 
 			if (oklist.Count > 0) {
-				Table sumtable = new Table(1, 7, false);
+				Table sumtable = new Table (1, 7, false);
 				sumtable.Attach (new Label ("Files within threshold\n" 
-				                            + String.Join ("\n", oklist.ConvertAll (x => System.IO.Path.GetFileName (x.Path)))),
+					+ String.Join ("\n", oklist.ConvertAll (x => System.IO.Path.GetFileName (x.Path)))),
 				              0, 6, 0, 1);
 				sumtable.Attach (new Label ("R2\n" 
-				                            + String.Join ("\n", oklist.ConvertAll (x => x.R2.ToString ()))),
+					+ String.Join ("\n", oklist.ConvertAll (x => x.R2.ToString ()))),
 				              6, 7, 0, 1);
 				vbox.Add (sumtable);
 			}
-			vbox.ShowAll();
+			vbox.ShowAll ();
 
 			string tooltip = "";
 			if (diff.Count == 1)
-				tooltip = string.Format ("\"{0}\" does not match its reference image. R2 = {1}", System.IO.Path.GetFileName(diff[0].Path), diff[0].R2.ToString("F4"));
+				tooltip = string.Format ("\"{0}\" does not match its reference image. R2 = {1}", System.IO.Path.GetFileName (diff [0].Path), diff [0].R2.ToString ("F4"));
 			else if (diff.Count > 0)
 				tooltip = string.Format ("{0} of {1} images do not match their reference images:\n", diff.Count, diff.Count + oklist.Count,
-				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2 = " + x.R2.ToString() )));
-//			StatusIcon_.Tooltip = tooltip;
-//			StatusIcon_.Visible = diff.Count > 0;
+				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2 = " + x.R2.ToString ())));
 
-			NotifyIcon_.BalloonTipTitle = folder;
-			NotifyIcon_.BalloonTipText = tooltip;
-			NotifyIcon_.Visible = diff.Count > 0;
+			if (StatusIcon_ != null) {
+				StatusIcon_.Tooltip = tooltip;
+				StatusIcon_.Visible = diff.Count > 0;
+			}
+			if (NotifyIcon_ != null) {
+				NotifyIcon_.BalloonTipTitle = folder;
+				NotifyIcon_.BalloonTipText = tooltip;
+				NotifyIcon_.Visible = diff.Count > 0;
+			}
 		}
 
 		AspectFrame createAspectFrame(Gdk.Pixbuf pixbuf)
@@ -401,6 +402,16 @@ namespace ImgDiff
 		{
 			UpdateR2();
 			this.entryR2.Text = R2_threshold.ToString("G");
+		}
+
+
+		public static bool IsLinux
+		{
+			get
+			{
+				int p = (int) Environment.OSVersion.Platform;
+				return (p == 4) || (p == 6) || (p == 128);
+			}
 		}
 	}
 }
