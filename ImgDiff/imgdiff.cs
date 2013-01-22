@@ -13,8 +13,9 @@ namespace ImgDiff
 	{
 		double R2_threshold;
 		DiffComputer DiffComputer_;
-		StatusIcon StatusIcon_;
-		Menu trayPopupMenu;
+		//StatusIcon StatusIcon_;
+		System.Windows.Forms.NotifyIcon NotifyIcon_;
+		//Menu trayPopupMenu;
 
 		public static Gdk.Pixbuf ErrorPixbuf;
 
@@ -35,13 +36,34 @@ namespace ImgDiff
 				});
 			};
 
-			trayPopupMenu = new Menu ();
+			/*trayPopupMenu = new Menu ();
 			StatusIcon_ = StatusIcon.NewFromStock(Stock.DialogWarning);//new StatusIcon(this.Icon);
 			StatusIcon_.Visible = false;
 			// Show/Hide the window (even from the Panel/Taskbar) when the TrayIcon has been clicked.
 			// StatusIcon_.Activate += delegate { this.Visible = !this.Visible; };
 			// Show a pop up menu when the icon has been right clicked.
 			StatusIcon_.PopupMenu += OnTrayIconPopup;			
+			StatusIcon_.Activate += delegate {
+				this.Show();
+			};*/
+
+			NotifyIcon_ = new System.Windows.Forms.NotifyIcon();
+			NotifyIcon_.Visible = false;
+			NotifyIcon_.Icon = System.Drawing.SystemIcons.Warning;
+			NotifyIcon_.BalloonTipClicked += delegate {
+				if (!this.HasFocus)
+				{
+					this.Visible = false;
+					this.Visible = true;
+				}
+			};
+			NotifyIcon_.Click += delegate {
+				if (!this.HasFocus)
+				{
+					this.Visible = false;
+					this.Visible = true;
+				}
+			};
 
 			R2_threshold = settings.R2_Threshold;
 			this.entryR2.Text = R2_threshold.ToString("G");
@@ -62,7 +84,7 @@ namespace ImgDiff
 			this.entryWatchedFolder.Text = settings.Path;
 		}
 
-		// Create the popup menu, on right click.
+/*		// Create the popup menu, on right click.
 		void OnTrayIconPopup (object o, EventArgs args)
 		{
 			foreach(Widget w in trayPopupMenu.AllChildren) trayPopupMenu.Remove(w);
@@ -76,11 +98,12 @@ namespace ImgDiff
 				string name = System.IO.Path.GetFileName(diff.Path);
 				ImageMenuItem menuItem = new ImageMenuItem (name + " R2=" + diff.R2.ToString("F4"));
 				float aspectSource = diff.A.Width / (float)diff.A.Height;
+				*/
 /*				if (aspectSource < aspectTarget)
 					menuItem.Image = new Image(diff.A.ScaleSimple((int)(height*aspectSource), height, Gdk.InterpType.Nearest));
 				else
 					menuItem.Image = new Image(diff.A.ScaleSimple(width, (int)(width/aspectSource), Gdk.InterpType.Nearest));*/
-				trayPopupMenu.Add(menuItem);
+/*				trayPopupMenu.Add(menuItem);
 
 				// Activate the application when anything is clicked.
 				menuItem.Activated += delegate {
@@ -91,7 +114,7 @@ namespace ImgDiff
 			trayPopupMenu.Popup();
 			trayPopupMenu.Activate();
 		}
-
+*/
 		void scrollTo (string name)
 		{
 			if (scrolledwindow1.Child == null)
@@ -169,8 +192,9 @@ namespace ImgDiff
 				AspectFrame af2 = createAspectFrame (diff [i].B);
 				Widget middlewidget = createDiffWidget (af, af2, diff [i]);
 
-				Label nametext = new Label (System.IO.Path.GetFileName (diff [i].Path));
-				Label nametext2 = new Label (System.IO.Path.GetFileName (diff [i].Path));
+				string filename = System.IO.Path.GetFileName (diff [i].Path);
+				Label nametext = new Label (filename);
+				Label nametext2 = new Label (diff [i].B == null ? "" : filename);
 
 				uint j = 2 * (uint)i + 2;
 				table.Attach (nametext, 0u, 3u, j - 2, j - 1);
@@ -229,12 +253,20 @@ namespace ImgDiff
 			}
 			vbox.ShowAll();
 
-			StatusIcon_.Visible = diff.Count > 0;
+			string tooltip;
 			if (diff.Count == 1)
-				StatusIcon_.Tooltip = string.Format ("\"{0}\" does not match its reference image. R2={1}", System.IO.Path.GetFileName(diff[0].Path), diff[0].R2.ToString("F4"));
+				tooltip = string.Format ("\"{0}\" does not match its reference image. R2 = {1}", System.IO.Path.GetFileName(diff[0].Path), diff[0].R2.ToString("F4"));
 			else
-				StatusIcon_.Tooltip = string.Format ("{0} of {1} images do not match their reference images:\n", diff.Count, diff.Count + oklist.Count,
-				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2=" + x.R2.ToString() )));
+				tooltip = string.Format ("{0} of {1} images do not match their reference images:\n", diff.Count, diff.Count + oklist.Count,
+				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2 = " + x.R2.ToString() )));
+//			StatusIcon_.Tooltip = tooltip;
+//			StatusIcon_.Visible = diff.Count > 0;
+
+			NotifyIcon_.BalloonTipTitle = folder;
+			NotifyIcon_.BalloonTipText = tooltip;
+			NotifyIcon_.Visible = diff.Count > 0;
+			if (NotifyIcon_.Visible)
+				NotifyIcon_.ShowBalloonTip(3);
 		}
 
 		AspectFrame createAspectFrame(Gdk.Pixbuf pixbuf)
