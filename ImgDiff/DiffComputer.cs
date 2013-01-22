@@ -88,22 +88,25 @@ namespace ImgDiff
 			watch.Start ();
 	
 			string folder = Path;
-			DirectoryInfo di = new DirectoryInfo(folder);
-			IEnumerable<FileInfo> files;
-			if (di.Exists)
-				files = di.EnumerateFiles();
-			else
+			IEnumerable<FileInfo> files = null;
+			if (Directory.Exists (folder)) {
+				DirectoryInfo di = new DirectoryInfo (folder);
+				if (di.Exists)
+				{
+					try {
+						di = new DirectoryInfo (GetFileSystemCasing(folder));
+						files = di.EnumerateFiles ();
+					} catch (System.Exception) {}
+				}
+			}
+			if (files == null)
 				files = new FileInfo[0];
-/*			if (di.Exists)
-				files = Directory.GetFiles (folder);
-			else
-				files = new string[0];
-*/	
+
 			PixbufCache_.flagToPrune ();
 			ReferenceCache_.flagToPrune ();
 			List<PixbufDiff> diffs = new List<PixbufDiff> ();
 			foreach (FileInfo fi in files) { // for (int i=0; i<files.Length; ++i) {
-				string path = trim(fi.FullName);
+				string path = fi.FullName;
 				PixbufDiff diff;
 				if (ReferenceStore.equalfiles (path)) {
 					diff = new PixbufDiff (null, null, path);
@@ -162,25 +165,32 @@ namespace ImgDiff
 				DiffListChanged (this);
 		}
 
-		static string trim(string path) {
-			System.IO.DirectoryInfo di = new System.IO.DirectoryInfo(path);
-			return di.Parent.FullName + System.IO.Path.DirectorySeparatorChar + di.Name;
+		static public string GetFileSystemCasing(string path)
+		{
+			if (System.IO.Path.IsPathRooted(path))
+			{
+				path = path.TrimEnd(System.IO.Path.DirectorySeparatorChar); // if you type c:\foo\ instead of c:\foo
+				try
+				{
+					string name = System.IO.Path.GetFileName(path);
+					if (name == "") return path.ToUpper() + System.IO.Path.DirectorySeparatorChar; // root reached
+					
+					string parent = System.IO.Path.GetDirectoryName(path); // retrieving parent of element to be corrected
+					
+					parent = GetFileSystemCasing(parent); //to get correct casing on the entire string, and not only on the last element
+					
+					DirectoryInfo diParent = new DirectoryInfo(parent);
+					FileSystemInfo[] fsiChildren = diParent.GetFileSystemInfos(name);
+					FileSystemInfo fsiChild = fsiChildren[0];
+					return fsiChild.FullName; // coming from GetFileSystemImfos() this has the correct case
+				}
+				catch (Exception ex) { Trace.TraceError(ex.Message); throw new ArgumentException("Invalid path"); }
+			}
+			else throw new ArgumentException("Absolute path needed, not relative");
 		}
-		
+
 		public static void test ()
 		{
-			string input;
-			string expected;
-			if (System.IO.Path.DirectorySeparatorChar == '/') {
-				input = "/greg//ggregoijh/eee";
-				expected = "/greg/ggregoijh/eee";
-			} else {
-				input = @"C:\greg\\ggregoijh\eee";
-				expected = @"C:\greg\ggregoijh\eee";
-			}
-			string t = trim(input);
-			if (t != expected)
-				throw new InvalidProgramException();
 		}
 	}
 }

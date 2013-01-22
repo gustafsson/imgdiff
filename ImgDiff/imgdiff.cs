@@ -48,13 +48,15 @@ namespace ImgDiff
 
 			this.entryWatchedFolder.Changed += delegate { HandleNewWatchedFolder(); };
 			this.filechooserbutton2.CurrentFolderChanged += delegate {
-				DirectoryInfo d1 = new DirectoryInfo(this.entryWatchedFolder.Text);
-				DirectoryInfo d2 = new DirectoryInfo(this.filechooserbutton2.CurrentFolder);
-				if ( string.IsNullOrWhiteSpace(this.entryWatchedFolder.Text)
-				    || d1.Name != d2.Name || (d1.Parent == null ? "" : d1.Parent.FullName) != (d2.Parent == null ? "" : d2.Parent.FullName))
-				{
-					this.entryWatchedFolder.Text = this.filechooserbutton2.CurrentFolder;
-				}
+				string texteditfolder = null;
+				try {
+					texteditfolder = DiffComputer.GetFileSystemCasing(this.entryWatchedFolder.Text);
+				} catch (Exception) {}
+				try {
+					string filechooserfolder = DiffComputer.GetFileSystemCasing(this.filechooserbutton2.CurrentFolder);
+					if ( filechooserfolder != texteditfolder)
+						this.entryWatchedFolder.Text = filechooserfolder;
+				} catch (Exception) {}
 			};
 
 			this.entryWatchedFolder.Text = settings.Path;
