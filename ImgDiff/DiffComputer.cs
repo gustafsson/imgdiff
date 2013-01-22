@@ -87,40 +87,45 @@ namespace ImgDiff
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
 	
-			string[] files;
 			string folder = Path;
-			if (Directory.Exists (folder))
+			DirectoryInfo di = new DirectoryInfo(folder);
+			IEnumerable<FileInfo> files;
+			if (di.Exists)
+				files = di.EnumerateFiles();
+			else
+				files = new FileInfo[0];
+/*			if (di.Exists)
 				files = Directory.GetFiles (folder);
 			else
 				files = new string[0];
-	
+*/	
 			PixbufCache_.flagToPrune ();
 			ReferenceCache_.flagToPrune ();
 			List<PixbufDiff> diffs = new List<PixbufDiff> ();
-			for (int i=0; i<files.Length; ++i) {
-				string path = trim (files [i]);
+			foreach (FileInfo fi in files) { // for (int i=0; i<files.Length; ++i) {
+				string path = trim(fi.FullName);
 				PixbufDiff diff;
-				if (ReferenceStore.equalfiles (files [i])) {
-					diff = new PixbufDiff (null, null, files [i]);
+				if (ReferenceStore.equalfiles (path)) {
+					diff = new PixbufDiff (null, null, path);
 				} else {
 					Pixbuf A = PixbufCache_.fromCache (path);
 					if (A == null) {
 						try {
-							A = new Pixbuf (path);
-							PixbufCache_.updateCache (path, A);
+							using (FileStream fs = fi.OpenRead()) {
+								A = new Pixbuf (fs);
+								PixbufCache_.updateCache (path, A);
+							}
 						} catch (GLib.GException x) {
-							if (x.Source == "gdk-sharp") {
+							if (x.Message == "Unrecognized image file format") {
 								// Not an image file
+							} else if (x.Message == "Image has zero width") {
+								// ignore
 							} else {
-								System.Console.WriteLine (x.Message);
+								System.Console.WriteLine (path + " " + x.Message);
 							}
 							continue;
 						} catch (Exception x) {
-							if (x.Source == "gdk-sharp") {
-								// Not an image file
-							} else {
-								System.Console.WriteLine (x.Message);
-							}
+							System.Console.WriteLine (path + " " + x.Message);
 							continue;
 						}
 					}
@@ -162,9 +167,19 @@ namespace ImgDiff
 			return di.Parent.FullName + System.IO.Path.DirectorySeparatorChar + di.Name;
 		}
 		
-		public static void test() {
-			string t = trim("/greg//ggregoijh/eee");
-			if (t != "/greg/ggregoijh/eee")
+		public static void test ()
+		{
+			string input;
+			string expected;
+			if (System.IO.Path.DirectorySeparatorChar == '/') {
+				input = "/greg//ggregoijh/eee";
+				expected = "/greg/ggregoijh/eee";
+			} else {
+				input = @"C:\greg\\ggregoijh\eee";
+				expected = @"C:\greg\ggregoijh\eee";
+			}
+			string t = trim(input);
+			if (t != expected)
 				throw new InvalidProgramException();
 		}
 	}
