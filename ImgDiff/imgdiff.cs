@@ -112,8 +112,6 @@ namespace ImgDiff
 		}
 
 		void updateNotifyIconContextMenu() {
-			DiffComputer.DiffResult result = DiffComputer_.Diff;
-			
 			List<PixbufDiff> difflist = new List<PixbufDiff> (DiffComputer_.Diff.List);
 			difflist.RemoveAll (x => x.R2 >= this.R2_threshold);
 
