@@ -1,4 +1,4 @@
 *.userprefs
 *.swp
-*.exe
-*.exe.mdb
+imgdiff/bin
+imgdiff/gtk-gui/generated.cs
