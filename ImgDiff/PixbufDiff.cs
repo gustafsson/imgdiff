@@ -99,22 +99,27 @@ namespace ImgDiff
 				byte* a = (byte*)A.Pixels;
 				byte* b = (byte*)B.Pixels;
 				byte* c = (byte*)C.Pixels;
-				int row = Math.Min(Math.Min(A.Rowstride, B.Rowstride), C.Rowstride);
+				int bnc = B.NChannels;
+				int anc = A.NChannels;
+				int nc = bnc < anc ? bnc : anc;
+				int w = A.Width;
 				for (int y=0; y<A.Height; ++y) {
 					int oa = y * A.Rowstride;
 					int ob = y * B.Rowstride;
 					int oc = y * C.Rowstride;
-					for (int n=0; n<A.Width; ++n)
+					for (int n=0; n<w; ++n)
 					{
-						for (int m=0; m<A.NChannels; ++m) {
-							int bv = 0;
-							if (m < B.NChannels)
-								bv = (int)b [ob++];
-							byte d = (byte)Math.Abs (((int)a [oa]) - bv);
-							amean += a [oa++];
-							c [oc++] = d;
+						for (int m=0; m<nc; ++m) {
+							int o = oa + n*anc + m;
+							int d = ((int)a [o]) - (int)b [ob + n*bnc + m];
+							if (d < 0) d = -d;
+							amean += a [o];
+							c [o] = (byte)d;
 							cmean += d;
 							v += d * d;
+						}
+						for (int m=nc; m<anc; ++m) {
+							c [oa + n*anc + m] = 0;
 						}
 					}
 				}
@@ -124,12 +129,11 @@ namespace ImgDiff
 				double scale = Math.Max(1, 32.0/cmean);
 				// Compute R2 denominator sum from 'a', and normalize 'c'
 				for (int y=0; y<A.Height; ++y) {
-					int oa = y * A.Rowstride;
-					int oc = y * C.Rowstride;
-					for (int x=0; x<row; ++x) {
-						double d = a[oa+x] - amean;
+					int o = y * A.Rowstride; // C is a copy of A and thus have the same Rowstride.
+					for (int x=0; x<anc*w; ++x) {
+						double d = a[o+x] - amean;
 						asum += d*d;
-						c[oc+x] = (byte)Math.Min (255.0, c[oc+x]*scale);
+						c[o+x] = (byte)Math.Min (255.0, c[o+x]*scale);
 					}
 				}
 			}
@@ -153,6 +157,11 @@ namespace ImgDiff
 				if ((l & 1)!=0) if (*((byte*)x1) != *((byte*)x2)) return false;
 				return true;
 			}
+		}
+
+		public static void test ()
+		{
+
 		}
 	}
 }
