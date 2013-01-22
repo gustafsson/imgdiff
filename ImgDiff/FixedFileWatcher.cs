@@ -11,22 +11,30 @@ namespace ImgDiff
 	{
 		CheckModifiedFiles CheckModifiedFiles_;
 		FileSystemWatcher watcher_;
+		string Path_;
 
 		public string Path {
 			get {
-				return CheckModifiedFiles_.Path;
+				return Path_;
 			}
 			set {
-				CheckModifiedFiles_.Path = value;
-				if (Directory.Exists (value)) {
-					watcher_.Path = value;
-					watcher_.EnableRaisingEvents = true;
-				} else
-					watcher_.EnableRaisingEvents = false;
+				Path_ = value;
+
+				if (CheckModifiedFiles_ != null)
+					CheckModifiedFiles_.Path = value;
+
+				if (watcher_ != null)
+				{
+					if (Directory.Exists (value)) {
+						watcher_.Path = value;
+						watcher_.EnableRaisingEvents = true;
+					} else
+						watcher_.EnableRaisingEvents = false;
+				}
 			}
 		}
 
-		public delegate void ChangedEventHandler(object sender, string[] affected_files);
+		public delegate void ChangedEventHandler(object sender, string affected_file);
 
 		/**
 		 * This event will be fired from various random different threads.
@@ -45,23 +53,25 @@ namespace ImgDiff
 
 		public FixedFileWatcher ()
 		{
-			CheckModifiedFiles_ = new CheckModifiedFiles();
-			CheckModifiedFiles_.FoundModifiedFile += (object sender, string[] files) => {
-				if (Changed != null)
-					Changed(this, files);
-			};
-
-			this.watcher_ = new FileSystemWatcher ();
-			watcher_.Changed += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Created += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Deleted += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
-			watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate (e);
+			bool useFileSystemWatcher = false;
+			if (useFileSystemWatcher) {
+				watcher_ = new FileSystemWatcher ();
+				watcher_.Changed += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+				watcher_.Created += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+				watcher_.Deleted += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+				watcher_.Renamed += (object sender, RenamedEventArgs e) => WatcherUpdate (e);
+			} else {
+				CheckModifiedFiles_ = new CheckModifiedFiles ();
+				CheckModifiedFiles_.Changed += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+				CheckModifiedFiles_.Created += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+				CheckModifiedFiles_.Deleted += (object sender, FileSystemEventArgs e) => WatcherUpdate (e);
+			}
 		}
 
 		void WatcherUpdate (FileSystemEventArgs e)
 		{
 			if (Changed != null)
-				Changed(this, new string[]{e.FullPath});
+				Changed(this, e.FullPath);
 		}
 	}
 }

@@ -15,8 +15,10 @@ namespace ImgDiff
 			set;
 		}
 
-		public delegate void ChangedEventHandler(object sender, string[] file);
-		public event ChangedEventHandler FoundModifiedFile;
+		public delegate void ChangedEventHandler(object sender, FileSystemEventArgs args);
+		public event ChangedEventHandler Changed;
+		public event ChangedEventHandler Created;
+		public event ChangedEventHandler Deleted;
 
 		public CheckModifiedFiles ()
 		{
@@ -30,10 +32,11 @@ namespace ImgDiff
 
 		void checkAgain ()
 		{
-			if (!Directory.Exists(Path) || string.IsNullOrWhiteSpace(Path))
+			String path = Path;
+			if (!Directory.Exists(path) || string.IsNullOrWhiteSpace(path))
 				return;
 			
-		    string [] files = Directory.GetFiles (Path);
+			string [] files = Directory.GetFiles (new DirectoryInfo(path).FullName);
 			
 			Dictionary<string,DateTime> thesewrites_ = new Dictionary<string, DateTime> ();
 			
@@ -43,18 +46,23 @@ namespace ImgDiff
 			Dictionary<string,DateTime> prevwrites = lastwrites_;
 			lastwrites_ = thesewrites_;
 
-			List<string> modifiedFiles = new List<string>();
 			foreach (KeyValuePair<string, DateTime> v in thesewrites_) {
-				if (!prevwrites.ContainsKey( v.Key )) // filesystemwatcher handles this
-					return;
+				if (!prevwrites.ContainsKey( v.Key )) {
+					if (Created != null)
+						Created(this, new FileSystemEventArgs( WatcherChangeTypes.Created, path, v.Key ));
+				}
 				if (!prevwrites[ v.Key ].Equals( v.Value))
 				{
-					modifiedFiles.Add( v.Key );
+					if (Changed != null)
+						Changed(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, v.Key ));
 				}
 			}
-			if (modifiedFiles.Count > 0)
-				if (FoundModifiedFile != null)
-					FoundModifiedFile( this, modifiedFiles.ToArray() );
+			foreach (KeyValuePair<string, DateTime> v in prevwrites) {
+				if (!thesewrites_.ContainsKey( v.Key )) {
+					if (Deleted != null)
+						Deleted(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, v.Key ));
+				}
+			}
 		}
 	}
 }

@@ -27,9 +27,9 @@ namespace ImgDiff
 				pixbufs_.Remove(path);
 		}
 
-		public void prune(string[]files)
+		public void prune(string file)
 		{
-			foreach(string file in files) pixbufs_.Remove( file );
+			pixbufs_.Remove( file );
 		}
 
 		public void flagToPrune()

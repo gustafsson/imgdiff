@@ -63,8 +63,8 @@ namespace ImgDiff
 			ReferenceCache_ = new PixbufCache();
 			recomputeThread_ = null;
 			FixedFileWatcher_ = new FixedFileWatcher();
-			FixedFileWatcher_.Changed += (object sender, string[] files) => {
-				PixbufCache_.prune(files);
+			FixedFileWatcher_.Changed += (object sender, string file) => {
+				PixbufCache_.prune(file);
 				LaunchRecompute();
 			};
 		}
