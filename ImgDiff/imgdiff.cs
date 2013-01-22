@@ -85,12 +85,13 @@ namespace ImgDiff
 		{
 			foreach(Widget w in trayPopupMenu.AllChildren) trayPopupMenu.Remove(w);
 
-			DiffComputer.DiffResult result = DiffComputer_.Diff;
+			List<PixbufDiff> difflist = new List<PixbufDiff> (DiffComputer_.Diff.List);
+			difflist.RemoveAll (x => x.R2 >= this.R2_threshold);
 
 			//int width = 32; // IconSize.Menu
 			//int height = 32;
 			//float aspectTarget = width / (float)height;
-			foreach (PixbufDiff diff in result.List) {
+			foreach (PixbufDiff diff in difflist) {
 				string name = System.IO.Path.GetFileName(diff.Path);
 				ImageMenuItem menuItem = new ImageMenuItem (name + " R2=" + diff.R2.ToString("F4"));
 				//float aspectSource = diff.A.Width / (float)diff.A.Height;
@@ -108,6 +109,26 @@ namespace ImgDiff
 			trayPopupMenu.ShowAll();
 			trayPopupMenu.Popup();
 			trayPopupMenu.Activate();
+		}
+
+		void updateNotifyIconContextMenu() {
+			DiffComputer.DiffResult result = DiffComputer_.Diff;
+			
+			List<PixbufDiff> difflist = new List<PixbufDiff> (DiffComputer_.Diff.List);
+			difflist.RemoveAll (x => x.R2 >= this.R2_threshold);
+
+			List<System.Windows.Forms.MenuItem> menuItems = new List<System.Windows.Forms.MenuItem>();
+			foreach (PixbufDiff diff in difflist) {
+				string name = System.IO.Path.GetFileName(diff.Path);
+				System.Windows.Forms.MenuItem menuItem = new System.Windows.Forms.MenuItem(name + " R2=" + diff.R2.ToString("F4"));
+
+				menuItem.Click += delegate {
+					this.scrollTo(name);
+				};
+				menuItems.Add( menuItem );
+			}
+
+			NotifyIcon_.ContextMenu = new System.Windows.Forms.ContextMenu(menuItems.ToArray());
 		}
 
 		void scrollTo (string name)
@@ -266,6 +287,7 @@ namespace ImgDiff
 				NotifyIcon_.BalloonTipTitle = folder;
 				NotifyIcon_.BalloonTipText = tooltip;
 				NotifyIcon_.Visible = diff.Count > 0;
+				updateNotifyIconContextMenu();
 			}
 		}
 
