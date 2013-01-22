@@ -118,9 +118,8 @@ namespace ImgDiff
 							cmean += d;
 							v += d * d;
 						}
-						for (int m=nc; m<anc; ++m) {
-							c [oa + n*anc + m] = 0;
-						}
+						if (C.HasAlpha)
+							c [oa + n*anc + anc-1] = 255;
 					}
 				}
 				amean /= (double)A.Height * A.Width * A.NChannels;
