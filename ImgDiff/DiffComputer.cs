@@ -15,10 +15,15 @@ namespace ImgDiff
 		{
 			public ReadOnlyCollection<PixbufDiff> List { get; private set; }
 			public string Path { get; private set; }
+			public string Status { get; private set; }
 
-			public DiffResult(List<PixbufDiff> List, string Path) {
-				this.List = List.AsReadOnly();
+			public DiffResult(List<PixbufDiff> List, string Path, string Status) {
+				if (List == null)
+					this.List = null;
+				else
+					this.List = List.AsReadOnly();
 				this.Path = Path;
+				this.Status = Status;
 			}
 		}
 
@@ -84,6 +89,19 @@ namespace ImgDiff
 		}
 
 		void recomputeDiff ()
+		{
+			try {
+				recomputeDiffKernel ();
+			} catch (System.IO.IOException) {
+			} catch (System.Exception x) {
+				this.Diff = new DiffResult (null, "", x.Message);
+				
+				if (DiffListChanged != null)
+					DiffListChanged (this);
+			}
+		}
+
+		void recomputeDiffKernel()
 		{
 			Stopwatch watch = new Stopwatch ();
 			watch.Start ();
@@ -163,7 +181,7 @@ namespace ImgDiff
 	
 			System.Console.WriteLine (string.Format ("Computed diff of '{2}' with {1} files in {0} s", watch.ElapsedMilliseconds * 1e-3, diffs.Count, folder));
 
-			this.Diff = new DiffResult (diffs, folder);
+			this.Diff = new DiffResult (diffs, folder, "");
 
 			if (DiffListChanged != null)
 				DiffListChanged (this);

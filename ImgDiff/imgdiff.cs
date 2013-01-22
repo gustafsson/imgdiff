@@ -87,8 +87,8 @@ namespace ImgDiff
 
 			DiffComputer.DiffResult result = DiffComputer_.Diff;
 
-			int width = 32; // IconSize.Menu
-			int height = 32;
+			//int width = 32; // IconSize.Menu
+			//int height = 32;
 			//float aspectTarget = width / (float)height;
 			foreach (PixbufDiff diff in result.List) {
 				string name = System.IO.Path.GetFileName(diff.Path);
@@ -174,8 +174,15 @@ namespace ImgDiff
 			updateSettings ();
 
 			DiffComputer.DiffResult result = DiffComputer_.Diff;
+			if (!string.IsNullOrEmpty (result.Status)) {
+				statusbartext (result.Status);
+			}
 			string folder = result.Path;
 
+			if (result.List == null) {
+				clearScrolledWindow();
+				return;
+			}
 			List<PixbufDiff> diff = new List<PixbufDiff> (result.List);
 			List<PixbufDiff> oklist = new List<PixbufDiff> (result.List);
 			oklist.RemoveAll (x => x.R2 < this.R2_threshold);
@@ -223,11 +230,7 @@ namespace ImgDiff
 					statusbartext (string.Format ("{0} of {1} images do not match their reference images", diff.Count, diff.Count + oklist.Count));
 			}
 
-			if (scrolledwindow1.Child != null) {
-				Bin c = (scrolledwindow1.Child as Bin);
-				if (null != c.Child)
-					c.Remove (c.Child);
-			}
+			clearScrolledWindow();
 
 			VBox vbox = new VBox ();
 			scrolledwindow1.AddWithViewport (vbox);
@@ -263,6 +266,15 @@ namespace ImgDiff
 				NotifyIcon_.BalloonTipTitle = folder;
 				NotifyIcon_.BalloonTipText = tooltip;
 				NotifyIcon_.Visible = diff.Count > 0;
+			}
+		}
+
+		void clearScrolledWindow()
+		{
+			if (scrolledwindow1.Child != null) {
+				Bin c = (scrolledwindow1.Child as Bin);
+				if (null != c.Child)
+					c.Remove (c.Child);
 			}
 		}
 

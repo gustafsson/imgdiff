@@ -49,18 +49,18 @@ namespace ImgDiff
 			foreach (KeyValuePair<string, DateTime> v in thesewrites_) {
 				if (!prevwrites.ContainsKey( v.Key )) {
 					if (Created != null)
-						Created(this, new FileSystemEventArgs( WatcherChangeTypes.Created, path, v.Key ));
+						Created(this, new FileSystemEventArgs( WatcherChangeTypes.Created, path, System.IO.Path.GetFileName(v.Key) ));
 				}
 				if (!prevwrites[ v.Key ].Equals( v.Value))
 				{
 					if (Changed != null)
-						Changed(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, v.Key ));
+						Changed(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, System.IO.Path.GetFileName(v.Key) ));
 				}
 			}
 			foreach (KeyValuePair<string, DateTime> v in prevwrites) {
 				if (!thesewrites_.ContainsKey( v.Key )) {
 					if (Deleted != null)
-						Deleted(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, v.Key ));
+						Deleted(this, new FileSystemEventArgs( WatcherChangeTypes.Changed, path, System.IO.Path.GetFileName(v.Key) ));
 				}
 			}
 		}
