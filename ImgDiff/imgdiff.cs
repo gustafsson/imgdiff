@@ -143,7 +143,7 @@ namespace ImgDiff
 				return;
 
 			if (Directory.Exists (folder))
-				this.filechooserbutton2.SetCurrentFolder (folder);
+				this.filechooserbutton2.SetCurrentFolder (new DirectoryInfo(folder).FullName);
 
 			DiffComputer_.Path = folder;
 		}
@@ -180,7 +180,7 @@ namespace ImgDiff
 
 			if (0 == diff.Count) {
 				if (oklist.Count > 0) {
-					table.Attach (new Label ("All images were compared within the threshold to the stored references files!"),
+					table.Attach (new Label ("All images were compared within the threshold to the stored references files"),
 					              0, 7, 0, 1);
 
 					int noneidentical_thresholded = 0;
@@ -192,9 +192,9 @@ namespace ImgDiff
 					else
 						statusbartext ("OK");
 				} else if (!Directory.Exists (folder)) {
-					statusbartext ("Folder " + folder + " does not exist.");
+					statusbartext ("Folder " + folder + " does not exist");
 				} else
-					statusbartext ("Found no image files in folder " + folder + ".");
+					statusbartext ("Found no image files in folder " + folder + "");
 			} else {
 				if (diff.Count == 1)
 					statusbartext (string.Format ("\"{0}\" does not match its reference image", System.IO.Path.GetFileName(diff[0].Path)));
@@ -250,6 +250,7 @@ namespace ImgDiff
 			sumbox.Add (createAspectFrame( diff.Diff ));
 
 			Label infotext = new Label (diff.diffstring);
+			infotext.LineWrap = true;
 			sumbox.Add (infotext);
 			Box.BoxChild infotextbc = ((Box.BoxChild)(sumbox [infotext]));
 			infotextbc.Expand = false;
@@ -359,7 +360,7 @@ namespace ImgDiff
 			double R2 = R2_threshold;
 			if (!double.TryParse (this.entryR2.Text, out R2))
 				return;
-			R2 = Math.Max (0.01, Math.Min (1, R2));
+			R2 = Math.Min (1, R2);
 			if (R2 != R2_threshold) {
 				R2_threshold = R2;
 				Update ();
