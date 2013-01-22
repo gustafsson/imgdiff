@@ -33,6 +33,8 @@ namespace ImgDiff
 			DiffComputer_.DiffListChanged += (DiffComputer sender) => {
 				Gtk.Application.Invoke( delegate {
 					Update();
+					if (NotifyIcon_.Visible)
+						NotifyIcon_.ShowBalloonTip(3);
 				});
 			};
 
@@ -181,8 +183,8 @@ namespace ImgDiff
 			DiffComputer.DiffResult result = DiffComputer_.Diff;
 			string folder = result.Path;
 
-			List<PixbufDiff> diff = result.List;
-			List<PixbufDiff> oklist = new List<PixbufDiff>(diff);
+			List<PixbufDiff> diff = new List<PixbufDiff>(result.List);
+			List<PixbufDiff> oklist = new List<PixbufDiff>(result.List);
 			oklist.RemoveAll (x => x.R2 < this.R2_threshold);
 			diff.RemoveAll (x => x.R2 >= this.R2_threshold);
 
@@ -253,10 +255,10 @@ namespace ImgDiff
 			}
 			vbox.ShowAll();
 
-			string tooltip;
+			string tooltip = "";
 			if (diff.Count == 1)
 				tooltip = string.Format ("\"{0}\" does not match its reference image. R2 = {1}", System.IO.Path.GetFileName(diff[0].Path), diff[0].R2.ToString("F4"));
-			else
+			else if (diff.Count > 0)
 				tooltip = string.Format ("{0} of {1} images do not match their reference images:\n", diff.Count, diff.Count + oklist.Count,
 				                              String.Join ("\n", diff.ConvertAll (x => System.IO.Path.GetFileName (x.Path) + " R2 = " + x.R2.ToString() )));
 //			StatusIcon_.Tooltip = tooltip;
@@ -265,8 +267,6 @@ namespace ImgDiff
 			NotifyIcon_.BalloonTipTitle = folder;
 			NotifyIcon_.BalloonTipText = tooltip;
 			NotifyIcon_.Visible = diff.Count > 0;
-			if (NotifyIcon_.Visible)
-				NotifyIcon_.ShowBalloonTip(3);
 		}
 
 		AspectFrame createAspectFrame(Gdk.Pixbuf pixbuf)

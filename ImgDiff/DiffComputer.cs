@@ -12,11 +12,11 @@ namespace ImgDiff
 	{
 		public class DiffResult 
 		{
-			public List<PixbufDiff> List { get; private set; }
+			public IReadOnlyCollection<PixbufDiff> List { get; private set; }
 			public string Path { get; private set; }
 
 			public DiffResult(List<PixbufDiff> List, string Path) {
-				this.List = List;
+				this.List = List.AsReadOnly();
 				this.Path = Path;
 			}
 		}
