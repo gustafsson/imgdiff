@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Gdk;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Timers;
 using System.Threading;
 
@@ -12,7 +13,7 @@ namespace ImgDiff
 	{
 		public class DiffResult 
 		{
-			public IReadOnlyCollection<PixbufDiff> List { get; private set; }
+			public ReadOnlyCollection<PixbufDiff> List { get; private set; }
 			public string Path { get; private set; }
 
 			public DiffResult(List<PixbufDiff> List, string Path) {

@@ -106,7 +106,6 @@ namespace ImgDiff
 				for (int y=0; y<A.Height; ++y) {
 					int oa = y * A.Rowstride;
 					int ob = y * B.Rowstride;
-					int oc = y * C.Rowstride;
 					for (int n=0; n<w; ++n)
 					{
 						for (int m=0; m<nc; ++m) {
