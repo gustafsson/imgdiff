@@ -2,3 +2,5 @@
 *.swp
 imgdiff/bin
 imgdiff/gtk-gui/generated.cs
+ImgDiff.app/Contents/MacOS
+ImgDiff.app/Contents/Resources
